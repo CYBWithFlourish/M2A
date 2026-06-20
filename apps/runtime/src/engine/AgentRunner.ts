@@ -35,7 +35,7 @@ export class AgentRunner {
     }
 
     const context = await this.memoryRouter.hydrateContext(node.memory_tier, userInput, userContext);
-    const modelName = node.model || 'llama-4-maverick-17b-128e-instruct';
+    const modelName = node.model || 'llama-3.3-70b-versatile';
     const provider = providers.resolveProviderForModel(modelName);
 
     // 1. Resolve Tools

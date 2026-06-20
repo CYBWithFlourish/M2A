@@ -281,7 +281,7 @@ export class AgentSpawnNodeHandler implements NodeHandler {
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
     const subAgentRole = (data?.role as string) || 'Sub-agent assistant';
-    const subAgentModel = (data?.model as string) || 'llama-4-maverick-17b-128e-instruct';
+    const subAgentModel = (data?.model as string) || 'llama-3.3-70b-versatile';
     const instructions = inputs[0] || 'Complete the assigned task with the provided context.';
 
     const subAgentNode = {

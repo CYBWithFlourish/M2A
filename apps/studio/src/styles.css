@@ -92,27 +92,38 @@ html, body {
 }
 
 .rete .socket {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--harbor-border);
-  background: var(--harbor-surface-alt);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  border: 2px solid #64748b !important;
+  background: #1e293b !important;
+  cursor: crosshair !important;
+  z-index: 30 !important;
 }
 
 .rete .socket:hover {
-  border-color: var(--walrus-400);
-  background: var(--walrus-400);
-  transform: scale(1.3);
-}
-
-.rete .socket.target {
-  border-color: var(--harbor-info);
+  border-color: #8b5cf6 !important;
+  background: #8b5cf6 !important;
 }
 
 .rete .socket.source {
-  border-color: var(--walrus-400);
+  border-color: #8b5cf6 !important;
+}
+
+.rete .socket.target {
+  border-color: #64748b !important;
+}
+
+.rete .socket.target:hover {
+  border-color: #22c55e !important;
+  background: #22c55e !important;
+}
+
+.rete .node .socket {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  z-index: 30 !important;
 }
 
 .node {
@@ -294,4 +305,83 @@ html, body {
 .connection-invalid path {
   stroke: #f87171 !important;
   stroke-dasharray: 4 4;
+}
+
+.rete .node {
+  border-radius: 8px !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  min-width: 170px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
+.rete .node .title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #e2e8f0 !important;
+  padding: 6px 10px 4px !important;
+}
+
+.rete .node .input-title,
+.rete .node .output-title {
+  font-size: 9px !important;
+  color: #94a3b8 !important;
+}
+
+.rete .node .socket {
+  border-color: #475569 !important;
+}
+
+.rete .node:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+
+.rete .node.selected {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 1px #8b5cf6, 0 6px 20px rgba(139, 92, 246, 0.15) !important;
+}
+
+.node-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 20;
+  padding: 0;
+}
+
+.rete .node:hover .node-delete-btn {
+  display: flex;
+}
+
+.node-delete-btn:hover {
+  background: #f87171;
+  color: white;
+  border-color: #f87171;
+}
+
+.node-category-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 10px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  z-index: 10;
 }

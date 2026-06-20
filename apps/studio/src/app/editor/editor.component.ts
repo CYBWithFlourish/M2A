@@ -68,7 +68,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     if (!type) return;
     const rect = container.getBoundingClientRect();
     const pos = {
-      x: event.clientX - rect.left - 120,
+      x: event.clientX - rect.left - 90,
       y: event.clientY - rect.top - 30,
     };
     this.editorService.addNode(type, pos).then((nodeDef) => {

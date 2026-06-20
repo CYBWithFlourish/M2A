@@ -2,6 +2,39 @@ import { Injectable, signal, inject, Injector } from '@angular/core';
 import { ClassicPreset } from 'rete';
 import type { NodeDefinition } from '../shared/types';
 
+const NODE_COLORS: Record<string, string> = {
+  agent: '#8b5cf6', agent_spawn: '#a855f7', code: '#06b6d4', output: '#f87171',
+  input: '#22c55e', webhook_trigger: '#06b6d4', schedule_trigger: '#f59e0b',
+  event_trigger: '#f97316', form_trigger: '#06b6d4', discord_trigger: '#5865F2',
+  conditional: '#f97316', merge: '#ec4899', loop: '#ec4899', counter: '#8b5cf6',
+  wait: '#f59e0b', json_parser: '#6366f1', csv_parser: '#22c55e', rss_reader: '#f97316',
+  pyth: '#8b5cf6', switchboard: '#f59e0b', http: '#14b8a6', email: '#ef4444',
+  slack: '#4A154B', discord: '#5865F2', telegram_send: '#0088cc', twitter: '#1DA1F2',
+  google_sheets: '#34A853', airtable: '#18BFFF', notion: '#000000',
+  sui: '#f59e0b', walrus: '#3b82f6', file: '#3b82f6', ipfs: '#65C2CB',
+  suins: '#06b6d4', balance_monitor: '#10b981', wormhole: '#6366f1',
+  sui_bridge: '#3b82f6', aftermath: '#06b6d4', navi: '#10b981', suilend: '#6366f1',
+  haedal: '#14b8a6', volo: '#8b5cf6', bucket: '#f59e0b', bluefin: '#06b6d4',
+  alphafi: '#10b981', price_alert: '#f59e0b', tradeport: '#ec4899', nft: '#ec4899',
+  nft_floor_alert: '#ec4899',
+};
+
+const NODE_CATEGORIES: Record<string, string> = {
+  agent: 'AI', agent_spawn: 'AI', code: 'Logic', output: 'Output',
+  input: 'Trigger', webhook_trigger: 'Trigger', schedule_trigger: 'Trigger',
+  event_trigger: 'Trigger', form_trigger: 'Trigger', discord_trigger: 'Trigger',
+  conditional: 'Logic', merge: 'Logic', loop: 'Logic', counter: 'Logic',
+  wait: 'Logic', json_parser: 'Data', csv_parser: 'Data', rss_reader: 'Data',
+  pyth: 'Oracle', switchboard: 'Oracle', http: 'Web2', email: 'Web2',
+  slack: 'Web2', discord: 'Web2', telegram_send: 'Web2', twitter: 'Web2',
+  google_sheets: 'Web2', airtable: 'Web2', notion: 'Web2',
+  sui: 'Chain', walrus: 'Chain', file: 'Chain', ipfs: 'Chain', suins: 'Chain',
+  balance_monitor: 'Chain', wormhole: 'Bridge', sui_bridge: 'Bridge',
+  aftermath: 'DeFi', navi: 'DeFi', suilend: 'DeFi', haedal: 'DeFi',
+  volo: 'DeFi', bucket: 'DeFi', bluefin: 'DeFi', alphafi: 'DeFi',
+  price_alert: 'DeFi', tradeport: 'NFT', nft: 'NFT', nft_floor_alert: 'NFT',
+};
+
 @Injectable({ providedIn: 'root' })
 export class EditorService {
   private reteEditor: any = null;
@@ -149,6 +182,7 @@ export class EditorService {
     }
 
     (node as any).nodeType = type;
+    (node as any).nodeId = node.id;
 
     const added = await this.reteEditor.addNode(node);
     if (!added) return null;
@@ -163,6 +197,8 @@ export class EditorService {
     if (nodeView) {
       await nodeView.translate(pos.x, pos.y);
     }
+
+    this._injectNodeUI(node.id, type);
 
     return {
       id: node.id,
@@ -198,6 +234,34 @@ export class EditorService {
     if (!this.reteEditor) return;
     try {
       await this.reteEditor.clear();
+    } catch {}
+  }
+
+  private _injectNodeUI(nodeId: string, type: string) {
+    try {
+      const nodeView = this.reteArea.nodeViews.get(nodeId);
+      if (!nodeView) return;
+      const el = (nodeView as any).element as HTMLElement;
+      if (!el) return;
+
+      const colour = NODE_COLORS[type] || '#6b7280';
+      const category = NODE_CATEGORIES[type] || 'Other';
+
+      el.style.position = 'relative';
+      el.style.borderLeft = `3px solid ${colour}`;
+
+      const btn = document.createElement('button');
+      btn.className = 'node-delete-btn';
+      btn.innerHTML = '&times;';
+      btn.onclick = (e: MouseEvent) => { e.stopPropagation(); this.removeNode(nodeId); };
+      el.appendChild(btn);
+
+      const badge = document.createElement('span');
+      badge.className = 'node-category-badge';
+      badge.style.background = colour + '20';
+      badge.style.color = colour;
+      badge.textContent = category;
+      el.appendChild(badge);
     } catch {}
   }
 

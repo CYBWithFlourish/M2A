@@ -8,8 +8,8 @@ const BUILTIN_TEMPLATES: (WorkflowDefinition & { description: string; category: 
     id: 'code-review', name: 'Code Review Agent', version: '1.0.0', description: 'Multi-reviewer code analysis pipeline', category: 'Development',
     nodes: [
       { id: 'input_1', type: 'input', position: { x: 50, y: 200 }, data: { label: 'Input', type: 'input' } },
-      { id: 'agent_1', type: 'agent', position: { x: 350, y: 120 }, data: { label: 'Senior Reviewer', type: 'agent', model: 'llama-4-maverick-17b-128e-instruct', directives: 'Review code for bugs, style, and security issues.' } },
-      { id: 'agent_2', type: 'agent', position: { x: 350, y: 320 }, data: { label: 'Junior Reviewer', type: 'agent', model: 'llama-4-maverick-17b-128e-instruct', directives: 'Check for common mistakes and suggest improvements.' } },
+      { id: 'agent_1', type: 'agent', position: { x: 350, y: 120 }, data: { label: 'Senior Reviewer', type: 'agent', model: 'llama-3.3-70b-versatile', directives: 'Review code for bugs, style, and security issues.' } },
+      { id: 'agent_2', type: 'agent', position: { x: 350, y: 320 }, data: { label: 'Junior Reviewer', type: 'agent', model: 'llama-3.3-70b-versatile', directives: 'Check for common mistakes and suggest improvements.' } },
       { id: 'output_1', type: 'output', position: { x: 650, y: 200 }, data: { label: 'Output', type: 'output' } },
     ],
     edges: [

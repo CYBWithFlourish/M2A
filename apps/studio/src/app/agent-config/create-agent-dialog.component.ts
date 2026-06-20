@@ -216,6 +216,21 @@ export class CreateAgentDialogComponent {
       return;
     }
 
+    if (!this.name.trim()) {
+      alert('Agent name is required');
+      return;
+    }
+
+    if (this.budgetCap <= 0) {
+      alert('Budget must be greater than 0');
+      return;
+    }
+
+    if (this.selectedProtocols().length === 0) {
+      alert('Select at least one protocol (e.g. Walrus, Sui RPC)');
+      return;
+    }
+
     this.txError.set(null);
 
     try {
