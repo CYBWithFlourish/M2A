@@ -1,7 +1,8 @@
-import { Component, signal, computed, viewChild, inject, HostListener, OnInit, ComponentRef, ViewContainerRef } from '@angular/core';
+import { Component, signal, computed, viewChild, inject, HostListener, OnInit } from '@angular/core';
 import { HeaderComponent } from './layout/header.component';
 import { SidebarComponent } from './layout/sidebar.component';
 import { EditorComponent } from './editor/editor.component';
+import { EditorService } from './editor/editor.service';
 import { NodePanelComponent } from './node-panel/node-panel.component';
 import { BottomPanelComponent } from './layout/bottom-panel.component';
 import { ActionPaletteComponent } from './layout/action-palette.component';
@@ -37,6 +38,9 @@ export class AppComponent implements OnInit {
   store = inject(WorkflowStore);
   agentStore = inject(AgentStore);
   auth = inject(AuthStore);
+  editorService = inject(EditorService);
+
+  activeCancel: (() => void) | null = null;
 
   sidebarOpen = signal(true);
   showTemplates = signal(false);
@@ -106,14 +110,71 @@ export class AppComponent implements OnInit {
     this.sidebarOpen.update(v => !v);
   }
 
-  addNodeToCanvas(type: string) {
+  async addNodeToCanvas(type: string) {
     const center = { x: window.innerWidth / 2 - 120, y: window.innerHeight / 2 - 60 };
     const offset = this.workflowNodes().length * 30;
-    this.store.addNode(type, { x: center.x + offset, y: center.y + offset });
+    const pos = { x: center.x + offset, y: center.y + offset };
+    await this.editorService.addNode(type, pos);
+    this.syncStoreFromEditor();
   }
 
-  loadWorkflow(def: WorkflowDefinition) {
+  async loadWorkflow(def: WorkflowDefinition) {
     this.store.loadWorkflow(def);
+    await this.rebuildEditorFromStore();
+  }
+
+  private syncStoreFromEditor() {
+    const editor = this.editorService.editor;
+    if (!editor) return;
+    const reteNodes = editor.getNodes();
+    const area = this.editorService.area;
+    const nodes: NodeDefinition[] = reteNodes.map((rn: any) => {
+      const nodeView = area?.nodeViews.get(rn.id);
+      return {
+        id: rn.id,
+        type: rn.nodeType || 'unknown',
+        position: nodeView ? { ...nodeView.position } : { x: 0, y: 0 },
+        data: {
+          label: rn.label || '',
+          type: rn.nodeType || 'unknown',
+          status: 'idle' as const,
+        },
+      };
+    });
+    const reteConns = editor.getConnections();
+    const edges: EdgeDefinition[] = reteConns.map((rc: any) => ({
+      id: rc.id,
+      source: rc.source,
+      target: rc.target,
+      sourceHandle: rc.sourceOutput,
+      targetHandle: rc.targetInput,
+    }));
+    this.store.setNodes(nodes);
+    this.store.setEdges(edges);
+  }
+
+  private async rebuildEditorFromStore() {
+    if (!this.editorService.isReady()) return;
+    await this.editorService.clearEditor();
+
+    const nodes = this.store.nodes();
+    const edges = this.store.edges();
+    const idMap = new Map<string, string>();
+
+    for (const nodeDef of nodes) {
+      const result = await this.editorService.addNode(nodeDef.type, nodeDef.position);
+      if (result) {
+        idMap.set(nodeDef.id, result.id);
+      }
+    }
+
+    for (const edgeDef of edges) {
+      const sourceId = idMap.get(edgeDef.source) || edgeDef.source;
+      const targetId = idMap.get(edgeDef.target) || edgeDef.target;
+      await this.editorService.addConnection(sourceId, targetId);
+    }
+
+    this.syncStoreFromEditor();
   }
 
   updateNodeData(nodeId: string, updates: Record<string, unknown>) {
@@ -121,28 +182,50 @@ export class AppComponent implements OnInit {
   }
 
   async handleRun() {
+    if (this.activeCancel) {
+      this.activeCancel();
+      this.activeCancel = null;
+    }
+
     this.store.setExecuting(true);
     this.store.clearLogs();
     this.store.clearNodeStates();
+    this.store.clearExecutionResults();
     this.store.addLog({ type: 'info', message: 'Starting execution...', nodeId: '', nodeLabel: 'System' });
 
-    try {
-      const definition: WorkflowDefinition = {
-        id: this.store.id() || 'demo',
-        name: this.workflowName(),
-        nodes: this.workflowNodes(),
-        edges: this.workflowEdges(),
-        version: '1.0.0',
-      };
-      await this.api.executeWorkflow(definition, {});
-      this.store.addLog({ type: 'llm', message: 'AI Analysis complete.', nodeId: 'agent_1', nodeLabel: 'Agent' });
-      this.store.addLog({ type: 'info', message: 'Pipeline finished.', nodeId: '', nodeLabel: 'System' });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      this.store.addLog({ type: 'error', message: msg, nodeId: '', nodeLabel: 'System' });
-    } finally {
-      this.store.setExecuting(false);
-    }
+    const definition: WorkflowDefinition = {
+      id: this.store.id() || 'demo',
+      name: this.workflowName(),
+      nodes: this.workflowNodes(),
+      edges: this.workflowEdges(),
+      version: '1.0.0',
+    };
+
+    this.activeCancel = this.api.streamExecute(definition, {}, (event) => {
+      switch (event.type) {
+        case 'node:start':
+          this.store.setNodeState(event.nodeId, 'running');
+          this.store.addLog({ type: 'info', message: `Node started: ${event.nodeLabel}`, nodeId: event.nodeId, nodeLabel: event.nodeLabel });
+          break;
+        case 'node:complete':
+          this.store.setNodeState(event.nodeId, 'success');
+          this.store.addLog({ type: 'llm', message: event.output?.slice(0, 200) || '', nodeId: event.nodeId, nodeLabel: event.nodeLabel });
+          this.store.addExecutionResult({ nodeId: event.nodeId, nodeLabel: event.nodeLabel, status: 'success', output: event.output || '', timestamp: event.timestamp });
+          break;
+        case 'node:error':
+          this.store.setNodeState(event.nodeId, 'error');
+          this.store.addLog({ type: 'error', message: event.error || 'Unknown error', nodeId: event.nodeId, nodeLabel: event.nodeLabel });
+          break;
+        case 'workflow:complete':
+          this.store.setExecuting(false);
+          this.store.addLog({ type: 'info', message: 'Pipeline finished.', nodeId: '', nodeLabel: 'System' });
+          setTimeout(() => {
+            this.store.clearNodeStates();
+          }, 2500);
+          this.activeCancel = null;
+          break;
+      }
+    });
   }
 
   async handleExportMCP() {

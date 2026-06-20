@@ -12,7 +12,7 @@ The core differentiator: **cross-user, cross-workflow continuous learning**. Eve
 
 ## Status
 
-**Fully built and integrated.** All major components are implemented end-to-end.
+**MVP Complete.** All 3 layers are implemented: persistent memory (Layer 1), workflow engine with 9 node types + scheduling + multi-agent coordination (Layer 2), and the Data Processing Agent for privacy-preserving dataset generation (Layer 3). Studio canvas is functional with Angular 19 + Rete.js.
 
 ### Apps
 
@@ -27,6 +27,7 @@ The core differentiator: **cross-user, cross-workflow continuous learning**. Eve
 |---------|-----------------|
 | `@m2a/sdk` (`packages/sdk/`) | Types + Zod validators (`WorkflowDefinition`, `WorkflowNode`, `MemoryTierConfig`, `AgentPolicy`, `ExecutionResult`, on-chain types) + `M2AClient` REST client with `executeWorkflow`/`executeAdHoc` |
 | `@m2a/client` (`packages/memwal-client/`) | MemWal SDK wrappers: `createPoolClient`/`createUserClient`, `MemoryRouter` (recall/remember), `ns` namespace builders, `resolve`/`currentNetwork`/`hostedRelayerUrl` env-var resolution |
+| `buiry` (`packages/buiry-sdk/`) | Standalone developer SDK: `Buiry.remember()`, `Buiry.recall()`, `Buiry.forget()` — wraps MemWal with zkLogin auth |
 
 ### Smart Contracts (`contracts/m2a/`)
 
@@ -79,9 +80,11 @@ User / Developer
         Services (7): sui_tx, sui_query, agent_wallet, deepbook,
                       cetus, walrus, llm
         Integrations (3): Telegram, Discord, Email
-              │
-              ▼
-      services/server (Rust Axum) :8000  ← MemWal Relayer
+        Dataset routes: /api/v1/datasets, /api/v1/datasets/stats
+        DPA (Data Processing Agent): background privacy-preserving dataset generation
+               │
+               ▼
+       services/server (Rust Axum) :8000  ← MemWal Relayer
         Ed25519 auth → Gemini embedding → pgvector → SEAL encrypt → Walrus
         TS sidecar :9000 for SEAL + Walrus operations
               │
@@ -142,6 +145,7 @@ m2a/
 │
 ├── packages/
 │   ├── memwal-client/            # @m2a/client - MemWal SDK, namespaces, network resolution
+│   ├── buiry-sdk/                 # buiry - Standalone developer SDK (Buiry.remember/recall/forget)
 │   └── sdk/                      # @m2a/sdk - Types + Zod + M2AClient + run()
 │
 ├── services/
@@ -163,11 +167,13 @@ m2a/
 | Anthropic | `@anthropic-ai/sdk` | `claude-*` | `ANTHROPIC_API_KEY` |
 | OpenAI | `openai` | `gpt-*`, `o1-*`, `o3-*` | `OPENAI_API_KEY` |
 | Gemini | `@google/generative-ai` | `gemini-*` | `GEMINI_API_KEY` |
-| Groq | `openai` (compatible) | `groq-*`, `mixtral-*`, `llama-*` | `GROQ_API_KEY` |
+| Groq (PRIMARY) | `openai` (compatible) | `groq-*`, `llama-4-*`, `llama-3.*` | `GROQ_API_KEY` |
 | DeepSeek | `openai` (compatible) | `deepseek-*` | `DEEPSEEK_API_KEY` |
 | OpenRouter | `openai` (compatible) | `openrouter-*` | `OPENROUTER_API_KEY` |
 | GitHub | `openai` (compatible) | `gpt-*` (preferred over OpenAI) | `GITHUB_TOKEN` |
 | Default | fallback | First available provider | (any) |
+
+**Groq is the PRIMARY provider with Llama 4 Maverick (`llama-4-maverick-17b-128e-instruct`) as the default model across the platform.** It offers the fastest inference speeds, native tool-use support, and a 1M token context window.
 
 ---
 
@@ -276,3 +282,15 @@ npm run dev:studio                          # :5173
 cd services/server && cargo run             # relayer :8000
 cd services/indexer && cargo run            # indexer
 ```
+
+---
+
+## Data Processing Agent (Layer 3)
+
+The DPA runs in the background and automatically:
+- Captures raw agent interactions and strips PII at the entry point
+- Aggregates individual data points into statistical claims (never stores raw personal data)
+- Categorizes output into: behavioral, decision_sequence, error_pattern, domain_specific
+- Runs privacy verification before any data exits the system
+- Stores verified datasets on Walrus as structured JSON/CSV blobs
+- Exposes datasets via `/api/v1/datasets` for browsing and download

@@ -76,6 +76,40 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+router.post('/:id/schedule', async (req, res) => {
+  try {
+    const { cronExpression, enabled } = req.body;
+    if (!cronExpression) return res.status(400).json({ error: 'cronExpression is required' });
+
+    const workflow = await db.getWorkflow(req.params.id);
+    if (!workflow) return res.status(404).json({ error: 'Workflow not found' });
+
+    await db.query(
+      `INSERT INTO workflow_schedules (workflow_id, cron_expression, enabled)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (workflow_id) DO UPDATE
+       SET cron_expression = EXCLUDED.cron_expression, enabled = EXCLUDED.enabled`,
+      [req.params.id, cronExpression, enabled !== false]
+    );
+
+    res.json({ scheduled: true, workflowId: req.params.id, cronExpression });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/:id/schedule', async (req, res) => {
+  try {
+    await db.query(
+      'DELETE FROM workflow_schedules WHERE workflow_id = $1',
+      [req.params.id]
+    );
+    res.json({ unscheduled: true, workflowId: req.params.id });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await db.deleteWorkflow(req.params.id);

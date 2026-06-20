@@ -20,7 +20,7 @@ export class GroqProvider implements LLMProvider {
 
   async generate(messages: LLMMessage[], options?: GenerationOptions): Promise<GenerationResult> {
     const response = await this.client.chat.completions.create({
-      model: options?.model || 'llama3-8b-8192',
+      model: options?.model || 'llama-4-maverick-17b-128e-instruct',
       messages: messages.map(m => ({
         role: m.role,
         content: m.content,

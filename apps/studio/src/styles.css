@@ -202,3 +202,96 @@ html, body {
   stroke-width: 1.5px;
   opacity: 0.5;
 }
+
+/* Node execution state indicators on canvas */
+.rete-node {
+  position: relative !important;
+}
+
+.node-running {
+  animation: node-pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.5) !important;
+  outline: 2px solid rgba(139, 92, 246, 0.6) !important;
+}
+
+.node-running::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #8b5cf6;
+  border-top-color: transparent;
+  animation: node-spin 0.8s linear infinite;
+  z-index: 10;
+}
+
+.node-success {
+  outline: 2px solid rgba(34, 197, 94, 0.5) !important;
+}
+
+.node-success::after {
+  content: '✓';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.node-error {
+  outline: 2px solid rgba(248, 113, 113, 0.5) !important;
+}
+
+.node-error::after {
+  content: '✕';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f87171;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.edge-running path {
+  stroke-dasharray: 8 4;
+  animation: edge-flow 0.6s linear infinite;
+}
+
+@keyframes node-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes node-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes edge-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+.connection-invalid path {
+  stroke: #f87171 !important;
+  stroke-dasharray: 4 4;
+}

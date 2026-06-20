@@ -5,6 +5,17 @@ import { defiBaseSkill } from './skills/defi/DeFiSkill.js';
 import { nftSkill } from './skills/nft/NFTSkill.js';
 import { deepBookLendSkill } from './skills/defi/lending/DeepBookLend.js';
 import { cetusLendSkill } from './skills/defi/lending/CetusLend.js';
+import { haedalSkill } from './skills/defi/HaedalSkill.js';
+import { voloSkill } from './skills/defi/VoloSkill.js';
+import { bucketSkill } from './skills/defi/BucketSkill.js';
+import { bluefinSkill } from './skills/defi/BluefinSkill.js';
+import { pythSkill } from './skills/PythSkill.js';
+import { switchboardSkill } from './skills/SwitchboardSkill.js';
+import { tradePortSkill } from './skills/nft/TradePortSkill.js';
+import { eventTriggerSkill } from './skills/EventTriggerSkill.js';
+import { wormholeSkill } from './skills/bridge/WormholeSkill.js';
+import { suiBridgeSkill } from './skills/bridge/SuiBridgeSkill.js';
+import { alphaFiSkill } from './skills/defi/AlphaFiSkill.js';
 
 import { serviceRegistry } from './services/ServiceRegistry.js';
 import { suiTxService } from './services/sui/SuiTxService.js';
@@ -26,6 +37,17 @@ export function bootstrapEngine() {
   skillRegistry.register(cetusSwapSkill);
   skillRegistry.register(deepBookLendSkill);
   skillRegistry.register(cetusLendSkill);
+  skillRegistry.register(haedalSkill);
+  skillRegistry.register(voloSkill);
+  skillRegistry.register(bucketSkill);
+  skillRegistry.register(bluefinSkill);
+  skillRegistry.register(pythSkill);
+  skillRegistry.register(switchboardSkill);
+  skillRegistry.register(tradePortSkill);
+  skillRegistry.register(eventTriggerSkill);
+  skillRegistry.register(wormholeSkill);
+  skillRegistry.register(suiBridgeSkill);
+  skillRegistry.register(alphaFiSkill);
   skillRegistry.register(nftSkill);
   console.log(`✅ Registered ${skillRegistry.getAll().length} skills`);
 

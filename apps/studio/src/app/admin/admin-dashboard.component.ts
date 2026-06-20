@@ -1,4 +1,5 @@
-import { Component, output } from '@angular/core';
+import { Component, output, inject, OnInit, signal } from '@angular/core';
+import { ApiService } from '../shared/api.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -52,13 +53,21 @@ import { Component, output } from '@angular/core';
                 }
               </div>
             </div>
+
+            <div class="mt-6">
+              <h3 class="mb-3 text-sm font-semibold text-harbor-text-heading">Credentials</h3>
+              <div class="rounded-lg border border-harbor-border bg-harbor-surface px-3 py-2 text-xs text-harbor-text-body">
+                {{ credentials().length }} credential(s) stored. Manage via API at /api/v1/credentials
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   `,
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnInit {
+  private api = inject(ApiService);
   close = output();
 
   stats = [
@@ -69,10 +78,59 @@ export class AdminDashboardComponent {
   ];
 
   recentActivity: string[] = [];
+  credentials = signal<any[]>([]);
   healthItems: Array<{ label: string; status: string }> = [
-    { label: 'Relayer Connection', status: 'healthy' },
+    { label: 'Relayer Connection', status: 'unknown' },
     { label: 'Sui RPC Endpoint', status: 'healthy' },
-    { label: 'Memory Pool Service', status: 'healthy' },
-    { label: 'Workflow Engine', status: 'healthy' },
+    { label: 'Memory Pool Service', status: 'unknown' },
+    { label: 'Workflow Engine', status: 'unknown' },
   ];
+
+  async ngOnInit() {
+    try {
+      const agents = await this.api.listAgents();
+      this.stats[0].value = String(agents.length);
+
+      const workflows = await this.api.listWorkflows();
+      this.stats[1].value = String(workflows.length);
+
+      try {
+        const res = await fetch('/api/v1/datasets/stats');
+        const dpaStats = await res.json();
+        this.stats[3].value = `${dpaStats.totalInteractions || 0}`;
+      } catch {}
+
+      if (agents.length > 0) {
+        for (const agent of agents.slice(0, 5)) {
+          try {
+            const activity = await this.api.getAgentActivity(agent.id);
+            for (const entry of activity.slice(0, 3)) {
+              this.recentActivity.push(`${entry.action} on ${entry.protocol} — ${new Date(entry.created_at).toLocaleDateString()}`);
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+
+    try {
+      const healthRes = await fetch('/health');
+      const health = await healthRes.json();
+      if (health.status === 'ok') {
+        this.healthItems[0].status = 'healthy';
+        this.healthItems[3].status = 'healthy';
+      }
+    } catch {
+      this.healthItems[0].status = 'error';
+      this.healthItems[3].status = 'error';
+    }
+
+    this.loadCredentials();
+  }
+
+  async loadCredentials() {
+    try {
+      const creds = await this.api.listCredentials();
+      this.credentials.set(creds);
+    } catch { this.credentials.set([]); }
+  }
 }

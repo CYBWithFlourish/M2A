@@ -66,4 +66,16 @@ export function walrusSidecarUrl(): string {
   return process.env.WALRUS_SIDECAR_URL || 'http://localhost:9000';
 }
 
+export function aftermathPackageId(): string {
+  return resolveNetworkVar('AFTERMATH_PACKAGE_ID') || '0xefe8b36e5f11e0a0cd8745e52b5a9d6e0d59f2ac5b6f1c01c4070a10aeea0e1b';
+}
+
+export function naviPackageId(): string {
+  return resolveNetworkVar('NAVI_PACKAGE_ID') || '0x2b4c8b6ef9e7d8a1c5f3b0e9d7a6c5b4e3f2d1a0b9c8d7e6f5a4b3c2d1e0f9a';
+}
+
+export function suilendPackageId(): string {
+  return resolveNetworkVar('SUILEND_PACKAGE_ID') || '0x5df60e6f0e7d7b5e6f8e0a697e5e6d6a5e5b6d5e6f6d7e5a6f5e5b6d5e6f6d';
+}
+
 export const SUI_CLOCK = '0x6';

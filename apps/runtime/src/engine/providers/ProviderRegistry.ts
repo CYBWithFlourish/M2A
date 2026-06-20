@@ -70,6 +70,10 @@ export class ProviderRegistry {
     }
     if (name.includes('gemini')) return this.getProvider('gemini');
     if (name.includes('deepseek')) return this.getProvider('deepseek');
+    if (name.includes('llama-4')) {
+      if (this.providers.has('groq')) return this.getProvider('groq');
+      throw new Error(`Model '${modelName}' requires Groq to be configured.`);
+    }
     if (name.includes('groq') || name.includes('llama')) {
       if (this.providers.has('groq')) return this.getProvider('groq');
       if (this.providers.has('openrouter')) return this.getProvider('openrouter');

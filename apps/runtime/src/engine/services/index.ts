@@ -5,5 +5,8 @@ export * from './sui/SuiQueryService.js';
 export * from './sui/AgentWalletService.js';
 export * from './defi/DeepBookService.js';
 export * from './defi/CetusService.js';
+export * from './defi/AftermathService.js';
+export * from './defi/NaviService.js';
+export * from './defi/SuilendService.js';
 export * from './walrus/WalrusService.js';
 export * from './ai/LLMService.js';

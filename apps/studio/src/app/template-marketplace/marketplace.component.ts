@@ -1,4 +1,4 @@
-import { Component, output, signal, inject } from '@angular/core';
+import { Component, output, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../shared/api.service';
 import { type WorkflowDefinition } from '../shared/types';
@@ -8,8 +8,8 @@ const BUILTIN_TEMPLATES: (WorkflowDefinition & { description: string; category: 
     id: 'code-review', name: 'Code Review Agent', version: '1.0.0', description: 'Multi-reviewer code analysis pipeline', category: 'Development',
     nodes: [
       { id: 'input_1', type: 'input', position: { x: 50, y: 200 }, data: { label: 'Input', type: 'input' } },
-      { id: 'agent_1', type: 'agent', position: { x: 350, y: 120 }, data: { label: 'Senior Reviewer', type: 'agent', model: 'gemini-1.5-pro', directives: 'Review code for bugs, style, and security issues.' } },
-      { id: 'agent_2', type: 'agent', position: { x: 350, y: 320 }, data: { label: 'Junior Reviewer', type: 'agent', model: 'gemini-1.5-flash', directives: 'Check for common mistakes and suggest improvements.' } },
+      { id: 'agent_1', type: 'agent', position: { x: 350, y: 120 }, data: { label: 'Senior Reviewer', type: 'agent', model: 'llama-4-maverick-17b-128e-instruct', directives: 'Review code for bugs, style, and security issues.' } },
+      { id: 'agent_2', type: 'agent', position: { x: 350, y: 320 }, data: { label: 'Junior Reviewer', type: 'agent', model: 'llama-4-maverick-17b-128e-instruct', directives: 'Check for common mistakes and suggest improvements.' } },
       { id: 'output_1', type: 'output', position: { x: 650, y: 200 }, data: { label: 'Output', type: 'output' } },
     ],
     edges: [
@@ -123,7 +123,7 @@ const BUILTIN_TEMPLATES: (WorkflowDefinition & { description: string; category: 
     </div>
   `,
 })
-export class TemplateMarketplaceComponent {
+export class TemplateMarketplaceComponent implements OnInit {
   private api = inject(ApiService);
 
   close = output();
@@ -136,6 +136,13 @@ export class TemplateMarketplaceComponent {
   categories = ['All', 'Development', 'Research', 'Support', 'Data', 'DeFi'];
 
   builtinTemplates = BUILTIN_TEMPLATES;
+
+  async ngOnInit() {
+    try {
+      const tmpls = await this.api.listTemplates() as any[];
+      this.remoteTemplates.set(tmpls.map((t: any) => t.definition || t).filter(Boolean));
+    } catch {}
+  }
 
   useTemplate(tmpl: WorkflowDefinition) {
     this.selectTemplate.emit(tmpl);
@@ -151,7 +158,7 @@ export class TemplateMarketplaceComponent {
       return nameMatch && catMatch;
     }).map(t => ({
       ...t,
-      nodeCount: t.nodes.length,
+      nodeCount: t.nodes?.length || 0,
     }));
   };
 }

@@ -35,7 +35,7 @@ export class AgentStore {
         // Get metadata from backend (name, timestamps)
           let meta: { name?: string; createdAt?: string; lastRunAt?: string | null } = {};
           try {
-            const resp = await fetch(`${(import.meta as any).env?.VITE_RUNTIME_URL || 'http://localhost:3001'}/api/v1/agents/${agentId}`);
+            const resp = await fetch(`/api/v1/agents/${agentId}`);
             if (resp.ok) meta = await resp.json();
           } catch {}
 

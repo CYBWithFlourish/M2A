@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { memoryRouter, platformDelegateKey, platformAccountId } from '../engine/components.js';
+import { createSuiClient } from '../config.js';
 
 export const router = Router();
 
@@ -58,5 +59,30 @@ router.get('/pool/:poolName/history', async (req, res) => {
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/verify/:txDigest', async (req, res) => {
+  try {
+    const { txDigest } = req.params;
+    const client = createSuiClient();
+
+    const result = await client.getTransaction({
+      digest: txDigest,
+      include: { effects: true, events: true },
+    });
+
+    const tx = result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
+
+    res.json({
+      verified: true,
+      digest: txDigest,
+      epoch: tx.epoch,
+      effects: tx.effects,
+      events: tx.events,
+      status: tx.status,
+    });
+  } catch (e: any) {
+    res.status(404).json({ verified: false, error: e.message || 'Transaction not found' });
   }
 });

@@ -22,7 +22,8 @@
     "start:runtime:mcp": "npm -w @m2a/runtime run start:mcp",
     "build:studio": "npm -w @m2a/studio run build",
     "build:client": "npm -w @m2a/client run build",
-    "build:packages": "npm -w @m2a/sdk run build && npm -w @m2a/client run build && npm -w @m2a/agent-wallet run build",
+    "build:buiry": "npm -w buiry run build",
+    "build:packages": "npm -w @m2a/sdk run build && npm -w @m2a/client run build && npm -w @m2a/agent-wallet run build && npm -w buiry run build",
     "build:sdk": "npm -w @m2a/sdk run build",
     "build:runtime": "npm -w @m2a/runtime run build"
   },

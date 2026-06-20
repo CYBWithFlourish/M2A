@@ -15,7 +15,7 @@ export class ApiService {
     }
     return this._agentStore;
   }
-  private baseUrl = 'http://localhost:3001/api/v1';
+  private baseUrl = '/api/v1';
 
   executeWorkflow(workflow: WorkflowDefinition, inputs: Record<string, unknown>) {
     const selectedAgentId = this.agentStore.selectedAgentId();
@@ -158,5 +158,52 @@ export class ApiService {
     return firstValueFrom(
       this.http.post(`${this.baseUrl}/agents/${id}/top-up`, { amount })
     );
+  }
+
+  listCredentials() { return firstValueFrom<any[]>(this.http.get<any[]>(`${this.baseUrl}/credentials`)); }
+  saveCredential(data: any) { return firstValueFrom(this.http.post(`${this.baseUrl}/credentials`, data)); }
+  deleteCredential(id: string) { return firstValueFrom(this.http.delete(`${this.baseUrl}/credentials/${id}`)); }
+
+  streamExecute(workflow: WorkflowDefinition, inputs: Record<string, unknown>, onEvent: (event: any) => void): () => void {
+    const selectedAgentId = this.agentStore.selectedAgentId();
+    const body = JSON.stringify({
+      workflow,
+      input: (inputs as any).userInput || 'Start the mission.',
+      agentWallet: selectedAgentId || undefined,
+    });
+
+    const controller = new AbortController();
+
+    fetch(`${this.baseUrl}/execute/raw/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      signal: controller.signal,
+    }).then(async (response) => {
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              onEvent(event);
+            } catch {}
+          }
+        }
+      }
+    }).catch(console.error);
+
+    return () => controller.abort();
   }
 }

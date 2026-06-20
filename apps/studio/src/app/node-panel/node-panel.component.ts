@@ -64,13 +64,15 @@ import type { NodeDefinition } from '../shared/types';
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-harbor-text-secondary">Model</label>
                   <select
-                    [ngModel]="n.data['model'] || 'gemini-1.5-flash'"
+                    [ngModel]="n.data['model'] || 'llama-4-maverick-17b-128e-instruct'"
                     (ngModelChange)="onChange('model', $event)"
                     class="w-full rounded-lg border border-harbor-border-input bg-harbor-surface px-3 py-2 text-sm text-harbor-text-body outline-none focus:border-walrus-400"
                   >
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="llama-3.1-70b">Llama 3.1 70B</option>
+                    <option value="llama-4-maverick-17b-128e-instruct">Llama 4 Maverick (Groq)</option>
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
                   </select>
                 </div>
 

@@ -43,7 +43,7 @@ export class WorkflowStore {
   executionResults = computed(() => this.state().executionResults);
   nodeStates = computed(() => this.state().nodeStates);
 
-  private takeSnapshot() {
+  takeSnapshot() {
     const s = this.state();
     const snapshot = { nodes: [...s.nodes], edges: [...s.edges] };
     const past = [...s.past.slice(-49), snapshot];
@@ -64,6 +64,10 @@ export class WorkflowStore {
         status: 'idle',
       },
     };
+    this.state.update(v => ({ ...v, nodes: [...v.nodes, node] }));
+  }
+
+  addNodeDefinition(node: NodeDefinition) {
     this.state.update(v => ({ ...v, nodes: [...v.nodes, node] }));
   }
 

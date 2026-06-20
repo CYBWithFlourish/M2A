@@ -21,7 +21,7 @@ export interface ZkLoginSession {
   maxEpoch: number;
 }
 
-const ZKL_SERVICE = 'https://zklservicest3rdwl.up.railway.app';
+const ZKL_SERVICE = environment.zkLoginServiceUrl;
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore implements OnDestroy {
@@ -102,7 +102,7 @@ export class AuthStore implements OnDestroy {
     }));
 
     const apiKey = (import.meta as any).env?.VITE_ZKL_API_KEY || '';
-    const redirect = encodeURIComponent(window.location.origin);
+    const redirect = encodeURIComponent(`${window.location.origin}/zklogin-callback`);
     window.location.href = `${ZKL_SERVICE}/auth/google?nonce=${encodeURIComponent(nonce)}&api_key=${apiKey}&redirect=${redirect}`;
   }
 
@@ -113,7 +113,7 @@ export class AuthStore implements OnDestroy {
     const { secretKey, randomness, maxEpoch: storedMaxEpoch } = JSON.parse(stored);
     sessionStorage.removeItem('zklogin_auth_ephemeral');
 
-    const maxEpoch = Number(params.maxEpoch) || storedMaxEpoch || 100;
+    const maxEpoch = Number(params.maxEpoch) || storedMaxEpoch || 0;
 
     const ephemeralKeyPair = Ed25519Keypair.fromSecretKey(new Uint8Array(secretKey));
     const ephemeralPublicKey = ephemeralKeyPair.getPublicKey();

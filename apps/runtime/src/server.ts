@@ -1,6 +1,7 @@
 import './env.js';
 import { initDb } from './db.js';
 import { bootstrapEngine } from './engine/bootstrap.js';
+import { scheduler } from './engine/Scheduler.js';
 
 initDb().catch(console.error);
 bootstrapEngine();
@@ -18,6 +19,8 @@ import { router as mcpRouter } from './routes/mcp.js';
 import { router as templatesRouter } from './routes/templates.js';
 import { router as integrationsRouter } from './routes/integrations.js';
 import { router as agentsRouter } from './routes/agents.js';
+import { router as datasetsRouter } from './routes/datasets.js';
+import { router as credentialsRouter } from './routes/credentials.js';
 import { initializePlatform } from './init.js';
 
 // MCP stdio mode — run as MCP server instead of HTTP
@@ -174,6 +177,8 @@ app.use('/api/v1/integrations', integrationsRouter);
 
 // Agent metadata CRUD
 app.use('/api/v1/agents', agentsRouter);
+app.use('/api/v1/datasets', datasetsRouter);
+app.use('/api/v1/credentials', credentialsRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 M2A Unified Runtime listening on port ${PORT}`);
@@ -182,9 +187,12 @@ app.listen(PORT, () => {
   console.log(`- Authz:        http://localhost:${PORT}/api/m2a/authz/check`);
   console.log(`- MCP over HTTP: http://localhost:${PORT}/api/v1/mcp/execute`);
   console.log(`- MCP stdio:    MCP_MODE=stdio node dist/server.js`);
+  console.log(`- Datasets:     http://localhost:${PORT}/api/v1/datasets`);
+  console.log(`- Credentials:  http://localhost:${PORT}/api/v1/credentials`);
 
   // Initialize platform (pool namespaces, etc.) — non-blocking
   initializePlatform();
+  scheduler.start();
 });
 
 // zkLogin helper: listen on port 3000 to catch Google OAuth redirect

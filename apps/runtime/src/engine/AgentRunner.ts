@@ -4,6 +4,7 @@ import { MemoryRouter } from './MemoryRouter.js';
 import { UserContext } from '@m2a/client';
 import { toolRegistry } from './tools/index.js';
 import { authorizeM2AAction } from '../m2a/authz.js';
+import { dpa } from './DataProcessingAgent.js';
 
 export interface AgentMetadata {
   creator: string;
@@ -34,7 +35,7 @@ export class AgentRunner {
     }
 
     const context = await this.memoryRouter.hydrateContext(node.memory_tier, userInput, userContext);
-    const modelName = node.model || 'gemini-1.5-flash';
+    const modelName = node.model || 'llama-4-maverick-17b-128e-instruct';
     const provider = providers.resolveProviderForModel(modelName);
 
     // 1. Resolve Tools
@@ -102,6 +103,14 @@ export class AgentRunner {
       if (node.memory_tier.write.length > 0) {
         await this.memoryRouter.saveArtifacts(node.memory_tier, text, userContext);
       }
+
+      dpa.receiveInteraction({
+        source: node.id,
+        type: 'agent_output',
+        content: text,
+        metadata: { model: modelName, toolCalls: loopCount, role: node.role },
+        timestamp: Date.now(),
+      });
 
       return text;
     }

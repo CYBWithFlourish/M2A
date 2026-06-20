@@ -94,6 +94,16 @@ export async function initDb() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS workflow_schedules (
+        workflow_id TEXT PRIMARY KEY REFERENCES workflows(id) ON DELETE CASCADE,
+        cron_expression TEXT NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        last_run_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS activity_log (
         id SERIAL PRIMARY KEY,
         agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -108,6 +118,46 @@ export async function initDb() {
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_activity_log_agent ON activity_log (agent_id);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS credentials (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'api_key',
+        owner TEXT NOT NULL DEFAULT '',
+        data JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_activity_log_agent ON activity_log (agent_id);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS execution_history (
+        id TEXT PRIMARY KEY,
+        workflow_id TEXT NOT NULL,
+        workflow_name TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'completed',
+        started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP WITH TIME ZONE,
+        inputs JSONB DEFAULT '{}',
+        outputs JSONB DEFAULT '{}',
+        node_results JSONB DEFAULT '[]',
+        error_message TEXT,
+        run_duration_ms INTEGER DEFAULT 0
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_exec_history_workflow ON execution_history (workflow_id);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_exec_history_started ON execution_history (started_at DESC);
     `);
 
     console.log('✅ Postgres: all tables verified/created');
@@ -268,6 +318,30 @@ export const db = {
 
   deleteAgentIntegration: async (agent_id: string) => {
     await pool.query('DELETE FROM agent_integrations WHERE agent_id = $1', [agent_id]);
+  },
+
+  saveCredential: async (cred: { id: string; name: string; type: string; owner: string; data: any }) => {
+    await pool.query(
+      `INSERT INTO credentials (id, name, type, owner, data, updated_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE
+       SET name = EXCLUDED.name, type = EXCLUDED.type, data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP`,
+      [cred.id, cred.name, cred.type, cred.owner, JSON.stringify(cred.data)]
+    );
+  },
+
+  listCredentials: async (owner: string) => {
+    const res = await pool.query('SELECT id, name, type, owner, created_at FROM credentials WHERE owner = $1 ORDER BY created_at DESC', [owner]);
+    return res.rows;
+  },
+
+  getCredential: async (id: string) => {
+    const res = await pool.query('SELECT * FROM credentials WHERE id = $1', [id]);
+    return res.rows[0] || null;
+  },
+
+  deleteCredential: async (id: string) => {
+    await pool.query('DELETE FROM credentials WHERE id = $1', [id]);
   },
 
   query: (text: string, params?: any[]) => pool.query(text, params),

@@ -51,7 +51,7 @@
               "@babel/runtime",
               "poseidon-lite"
             ],
-            "externalDependencies": ["web-worker", "@angular/elements"]
+            "externalDependencies": ["web-worker"]
           },
           "configurations": {
             "production": {

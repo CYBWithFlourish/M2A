@@ -290,7 +290,7 @@ export class CreateAgentDialogComponent {
 
       // Register with backend
       try {
-        await fetch(`${(import.meta as any).env?.VITE_RUNTIME_URL || 'http://localhost:3001'}/api/v1/agents`, {
+        await fetch(`/api/v1/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
