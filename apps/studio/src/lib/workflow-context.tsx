@@ -41,6 +41,8 @@ type State = {
   running: boolean;
   agents: Agent[];
   selectedAgentId: string | null;
+  undoStack: { nodes: CanvasNode[]; connections: Connection[] }[];
+  redoStack: { nodes: CanvasNode[]; connections: Connection[] }[];
 };
 
 type Action =
@@ -61,7 +63,9 @@ type Action =
   | { type: "set_workflow_id"; id: string | null }
   | { type: "set_node_output"; id: string; output: string }
   | { type: "set_deployed"; deployed: boolean }
-  | { type: "update_node_config"; id: string; config: Record<string, unknown> };
+  | { type: "update_node_config"; id: string; config: Record<string, unknown> }
+  | { type: "undo" }
+  | { type: "redo" };
 
 const initialState: State = {
   workflowName: "New Workflow",
@@ -74,6 +78,8 @@ const initialState: State = {
   running: false,
   agents: [],
   selectedAgentId: null,
+  undoStack: [],
+  redoStack: [],
 };
 
 function isAgent(value: any): value is Agent {
@@ -84,29 +90,42 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "rename":
       return { ...state, workflowName: action.name };
-    case "add_node":
-      return { ...state, nodes: [...state.nodes, action.node], selectedId: action.node.id };
-    case "move_node":
-      return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, x: action.x, y: action.y } : n)) };
-    case "remove_node":
+    case "add_node": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
+      return { ...state, nodes: [...state.nodes, action.node], selectedId: action.node.id, undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
+    }
+    case "move_node": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
+      return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, x: action.x, y: action.y } : n)), undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
+    }
+    case "remove_node": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
       return {
         ...state,
         nodes: state.nodes.filter((n) => n.id !== action.id),
         connections: state.connections.filter((c) => c.from !== action.id && c.to !== action.id),
         selectedId: state.selectedId === action.id ? null : state.selectedId,
+        undoStack: [...state.undoStack.slice(-49), snapshot],
+        redoStack: [],
       };
+    }
     case "select":
       return { ...state, selectedId: action.id };
     case "connect": {
       if (action.from === action.to) return state;
       if (state.connections.some((c) => c.from === action.from && c.to === action.to)) return state;
+      const snapshot = { nodes: state.nodes, connections: state.connections };
       return {
         ...state,
         connections: [...state.connections, { id: `c_${Date.now()}`, from: action.from, to: action.to }],
+        undoStack: [...state.undoStack.slice(-49), snapshot],
+        redoStack: [],
       };
     }
-    case "disconnect":
-      return { ...state, connections: state.connections.filter((c) => c.id !== action.id) };
+    case "disconnect": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
+      return { ...state, connections: state.connections.filter((c) => c.id !== action.id), undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
+    }
     case "set_status":
       return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, status: action.status } : n)) };
     case "log":
@@ -119,16 +138,42 @@ function reducer(state: State, action: Action): State {
       return { ...state, agents: [...state.agents, action.agent], selectedAgentId: action.agent.id };
     case "select_agent":
       return { ...state, selectedAgentId: action.id };
-    case "load_template":
-      return { ...state, nodes: action.nodes, connections: action.connections, workflowName: action.name, selectedId: null };
+    case "load_template": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
+      return { ...state, nodes: action.nodes, connections: action.connections, workflowName: action.name, selectedId: null, undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
+    }
     case "set_workflow_id":
       return { ...state, workflowId: action.id };
     case "set_node_output":
       return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, config: { ...n.config, output: action.output } } : n)) };
     case "set_deployed":
       return { ...state, deployed: action.deployed };
-    case "update_node_config":
-      return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, config: { ...n.config, ...action.config } } : n)) };
+    case "update_node_config": {
+      const snapshot = { nodes: state.nodes, connections: state.connections };
+      return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, config: { ...n.config, ...action.config } } : n)), undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
+    }
+    case "undo": {
+      if (state.undoStack.length === 0) return state;
+      const prev = state.undoStack[state.undoStack.length - 1];
+      return {
+        ...state,
+        nodes: prev.nodes,
+        connections: prev.connections,
+        undoStack: state.undoStack.slice(0, -1),
+        redoStack: [...state.redoStack, { nodes: state.nodes, connections: state.connections }],
+      };
+    }
+    case "redo": {
+      if (state.redoStack.length === 0) return state;
+      const next = state.redoStack[state.redoStack.length - 1];
+      return {
+        ...state,
+        nodes: next.nodes,
+        connections: next.connections,
+        redoStack: state.redoStack.slice(0, -1),
+        undoStack: [...state.undoStack, { nodes: state.nodes, connections: state.connections }],
+      };
+    }
     default:
       return state;
   }

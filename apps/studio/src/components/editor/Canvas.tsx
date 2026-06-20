@@ -16,6 +16,7 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const clipboard = useRef<CanvasNode | null>(null);
 
   const screenToCanvas = useCallback(
     (sx: number, sy: number) => {
@@ -73,12 +74,55 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
     return () => el.removeEventListener("wheel", h);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (meta && key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        dispatch({ type: "undo" });
+      }
+      if (meta && key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        dispatch({ type: "redo" });
+      }
+      if (meta && key === 'y') {
+        e.preventDefault();
+        dispatch({ type: "redo" });
+      }
+      if (meta && key === 'c' && !e.shiftKey && selectedId) {
+        e.preventDefault();
+        const node = nodes.find(n => n.id === selectedId);
+        if (node) clipboard.current = { ...node };
+      }
+      if (meta && key === 'v' && !e.shiftKey && clipboard.current) {
+        e.preventDefault();
+        const src = clipboard.current;
+        addNodeOfType(src.type, src.x + 40, src.y + 40);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [dispatch, nodes, selectedId, addNodeOfType]);
+
   const startConnect = (id: string) => {
     setPendingFrom(id);
   };
-  const finishConnect = (id: string) => {
-    if (pendingFrom && pendingFrom !== id) {
-      dispatch({ type: "connect", from: pendingFrom, to: id });
+  const finishConnect = (targetId: string) => {
+    if (!pendingFrom) return;
+    if (pendingFrom === targetId) { setPendingFrom(null); setCursor(null); return; }
+    const sourceNode = nodes.find(n => n.id === pendingFrom);
+    const targetNode = nodes.find(n => n.id === targetId);
+    if (!sourceNode || !targetNode) { setPendingFrom(null); setCursor(null); return; }
+    const sourceType = sourceNode.type;
+    const targetType = targetNode.type;
+    const invalid =
+      sourceType === 'output' ||
+      targetType === 'input' ||
+      ['webhook_trigger','schedule_trigger','event_trigger','form_trigger','discord_trigger','input'].includes(targetType) ||
+      sourceType === 'merge';
+    if (!invalid) {
+      dispatch({ type: "connect", from: pendingFrom, to: targetId });
     }
     setPendingFrom(null);
     setCursor(null);
@@ -117,9 +161,24 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
       className="canvas-grid relative flex-1 overflow-hidden bg-surface-dim"
       style={{ cursor: panning ? "grabbing" : "default" }}
     >
-      {/* zoom level badge */}
-      <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-2 rounded-md border border-border bg-surface-container/80 px-2 py-1 text-[10px] font-mono text-muted-foreground backdrop-blur">
-        {(view.k * 100).toFixed(0)}%
+      {/* zoom controls */}
+      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-1 rounded-md border border-border bg-surface-container/80 px-1 py-0.5 backdrop-blur">
+        <button
+          onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k + 0.1) }))}
+          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
+          title="Zoom in"
+        >+</button>
+        <span className="w-10 text-center font-mono text-[10px] text-muted-foreground">{(view.k * 100).toFixed(0)}%</span>
+        <button
+          onClick={() => setView(v => ({ ...v, k: Math.max(0.4, v.k - 0.1) }))}
+          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
+          title="Zoom out"
+        >−</button>
+        <button
+          onClick={() => setView({ x: 0, y: 0, k: 1 })}
+          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
+          title="Reset zoom"
+        >⟲</button>
       </div>
 
       {/* Cmd+K hint */}
@@ -130,6 +189,41 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
         <kbd className="rounded bg-surface-high px-1 font-mono text-[10px]">⌘K</kbd>
         Add nodes
       </button>
+
+      {/* minimap */}
+      {!isEmpty && nodes.length > 0 && (() => {
+        const bounds = nodes.reduce((acc, n) => ({
+          minX: Math.min(acc.minX, n.x),
+          minY: Math.min(acc.minY, n.y),
+          maxX: Math.max(acc.maxX, n.x + NODE_W),
+          maxY: Math.max(acc.maxY, n.y + NODE_H),
+        }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+        const w = bounds.maxX - bounds.minX + 100;
+        const h = bounds.maxY - bounds.minY + 100;
+        const scale = Math.min(160 / w, 112 / h);
+
+        return (
+          <div className="absolute bottom-4 right-4 z-20 w-40 h-28 rounded-lg border border-border bg-surface-container/80 backdrop-blur overflow-hidden">
+            <div className="relative" style={{ transform: `scale(${scale})`, transformOrigin: '0 0', width: w, height: h }}>
+              {nodes.map(n => (
+                <div
+                  key={n.id}
+                  className="absolute rounded-sm"
+                  style={{
+                    left: n.x - bounds.minX + 50,
+                    top: n.y - bounds.minY + 50,
+                    width: NODE_W,
+                    height: NODE_H,
+                    background: (getNodeDef(n.type)?.color || '#64748b') + '30',
+                    border: `1px solid ${(getNodeDef(n.type)?.color || '#64748b')}50`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* World transform */}
       <div
