@@ -15,6 +15,41 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/deployed', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, name, definition->>'version' as version, deployed, deployed_at, last_triggered_at, trigger_error, trigger_count, definition
+       FROM workflows WHERE deployed = true ORDER BY deployed_at DESC`
+    );
+    const deployments = result.rows.map((row: any) => {
+      const def = row.definition || {};
+      const triggers = (def.nodes || []).filter((n: any) =>
+        ['webhook_trigger', 'schedule_trigger', 'event_trigger', 'form_trigger', 'discord_trigger'].includes(n.type)
+      );
+      return {
+        id: row.id,
+        name: row.name,
+        version: row.version,
+        deployed: row.deployed,
+        deployed_at: row.deployed_at,
+        last_triggered_at: row.last_triggered_at,
+        trigger_error: row.trigger_error,
+        trigger_count: row.trigger_count,
+        triggers: triggers.map((t: any) => ({
+          type: t.type,
+          token: t.data?.webhookToken || t.data?.formToken || null,
+          cron: t.data?.cronExpression || null,
+          eventName: t.data?.eventName || null,
+        })),
+        nodeCount: (def.nodes || []).length,
+      };
+    });
+    res.json(deployments);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const workflow = await db.getWorkflow(req.params.id);
@@ -108,6 +143,25 @@ router.delete('/:id/schedule', async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+router.post('/:id/deploy', async (req, res) => {
+  try {
+    const workflow = await db.getWorkflow(req.params.id);
+    if (!workflow) return res.status(404).json({ error: 'Not found' });
+    await db.query(
+      `UPDATE workflows SET deployed = true, deployed_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [req.params.id]
+    );
+    res.json({ deployed: true, workflowId: req.params.id });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:id/undeploy', async (req, res) => {
+  try {
+    await db.query(`UPDATE workflows SET deployed = false WHERE id = $1`, [req.params.id]);
+    res.json({ deployed: false, workflowId: req.params.id });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', async (req, res) => {

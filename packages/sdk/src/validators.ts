@@ -21,7 +21,7 @@ export const BaseWorkflowNodeSchema = z.object({
 export const AgentNodeSchema = BaseWorkflowNodeSchema.extend({
   type: z.literal('agent'),
   role: z.string().optional().default(''),
-  model: z.string().optional().default('llama-4-maverick-17b-128e-instruct'),
+  model: z.string().optional().default('llama-3.3-70b-versatile'),
   tools: z.array(z.string()).optional().default([]),
   memory_tier: MemoryTierConfigSchema.optional().default({ read: [], write: [] }),
 });

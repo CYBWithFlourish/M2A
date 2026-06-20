@@ -27,7 +27,7 @@ export class AgentRunner {
     const stepAuthz = await authorizeM2AAction({
       agentId: node.id,
       action: 'agent.runStep',
-      namespace: node.memory_tier.write?.[0] || node.memory_tier.read?.[0],
+      namespace: node.memory_tier?.write?.[0] || node.memory_tier?.read?.[0],
     });
 
     if (!stepAuthz.allowed) {
@@ -35,11 +35,14 @@ export class AgentRunner {
     }
 
     const context = await this.memoryRouter.hydrateContext(node.memory_tier, userInput, userContext);
-    const modelName = node.model || 'llama-3.3-70b-versatile';
+    const modelName = node.model || (node.data as any)?.model || 'llama-3.3-70b-versatile';
+    const role = node.role || (node.data as any)?.role || (node.data as any)?.directives || 'You are a helpful assistant.';
+    const tools = node.tools || (node.data as any)?.tools || [];
+    const nodeData: any = node.data || {};
     const provider = providers.resolveProviderForModel(modelName);
 
     // 1. Resolve Tools
-    const availableTools = (node.tools || []).map(name => toolRegistry.getTool(name)).filter(Boolean);
+    const availableTools = (tools || []).map(name => toolRegistry.getTool(name)).filter(Boolean);
     const toolDefinitions = availableTools.map(t => ({
       name: t?.name,
       description: t?.description,
@@ -53,7 +56,7 @@ export class AgentRunner {
     let currentMessages: any[] = [
       { 
         role: 'system', 
-        content: `${node.role}\n\n### HISTORICAL CONTEXT (via MemWal) ###\n${context}${toolPrompt}` 
+        content: `${role}\n\n### HISTORICAL CONTEXT (via MemWal) ###\n${context}${toolPrompt}` 
       },
       { 
         role: 'user', 
@@ -77,7 +80,7 @@ export class AgentRunner {
             const toolAuthz = await authorizeM2AAction({
               agentId: node.id,
               action: 'tool.execute',
-              namespace: node.memory_tier.write?.[0] || node.memory_tier.read?.[0],
+              namespace: node.memory_tier?.write?.[0] || node.memory_tier?.read?.[0],
               tool: call.name,
             });
 

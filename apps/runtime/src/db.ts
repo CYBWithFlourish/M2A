@@ -33,6 +33,22 @@ export async function initDb() {
     `);
 
     await client.query(`
+      ALTER TABLE workflows ADD COLUMN IF NOT EXISTS deployed BOOLEAN NOT NULL DEFAULT false;
+    `);
+    await client.query(`
+      ALTER TABLE workflows ADD COLUMN IF NOT EXISTS deployed_at TIMESTAMP WITH TIME ZONE;
+    `);
+    await client.query(`
+      ALTER TABLE workflows ADD COLUMN IF NOT EXISTS last_triggered_at TIMESTAMP WITH TIME ZONE;
+    `);
+    await client.query(`
+      ALTER TABLE workflows ADD COLUMN IF NOT EXISTS trigger_error TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE workflows ADD COLUMN IF NOT EXISTS trigger_count INTEGER NOT NULL DEFAULT 0;
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS templates (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -170,30 +186,35 @@ export async function initDb() {
 
 export const db = {
   saveWorkflow: async (workflow: any) => {
+    const hasDeployed = 'deployed' in workflow;
     const query = `
-      INSERT INTO workflows (id, name, owner, namespace_prefix, definition, updated_at)
-      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      INSERT INTO workflows (id, name, owner, namespace_prefix, definition${hasDeployed ? ', deployed, deployed_at' : ''}, updated_at)
+      VALUES ($1, $2, $3, $4, $5${hasDeployed ? ', $6, $7' : ''}, CURRENT_TIMESTAMP)
       ON CONFLICT (id) DO UPDATE
       SET name = EXCLUDED.name,
           owner = EXCLUDED.owner,
           namespace_prefix = EXCLUDED.namespace_prefix,
-          definition = EXCLUDED.definition,
+          definition = EXCLUDED.definition${hasDeployed ? ', deployed = EXCLUDED.deployed, deployed_at = EXCLUDED.deployed_at' : ''},
           updated_at = CURRENT_TIMESTAMP;
     `;
-    await pool.query(query, [
+    const params: any[] = [
       workflow.id,
       workflow.name,
       workflow.owner || '',
       workflow.namespace_prefix || '',
       workflow,
-    ]);
+    ];
+    if (hasDeployed) {
+      params.push(workflow.deployed, workflow.deployed_at || null);
+    }
+    await pool.query(query, params);
   },
 
   getWorkflow: async (id: string) => {
-    const res = await pool.query('SELECT id, name, owner, namespace_prefix, definition, created_at, updated_at FROM workflows WHERE id = $1', [id]);
+    const res = await pool.query('SELECT id, name, owner, namespace_prefix, definition, deployed, deployed_at, last_triggered_at, trigger_error, trigger_count, created_at, updated_at FROM workflows WHERE id = $1', [id]);
     if (!res.rows[0]) return null;
     const row = res.rows[0];
-    return { ...row.definition, owner: row.owner, namespace_prefix: row.namespace_prefix };
+    return { ...row.definition, owner: row.owner, namespace_prefix: row.namespace_prefix, deployed: row.deployed, deployed_at: row.deployed_at, last_triggered_at: row.last_triggered_at, trigger_error: row.trigger_error, trigger_count: row.trigger_count };
   },
 
   listWorkflows: async (owner?: string) => {

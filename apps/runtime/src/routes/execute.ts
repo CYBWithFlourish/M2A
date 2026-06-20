@@ -270,6 +270,7 @@ router.post('/trigger/:token', async (req, res) => {
     if (!workflow) return res.status(404).json({ error: 'No workflow found for this webhook' });
 
     const fullWorkflow = await db.getWorkflow(workflow.id);
+    if (!fullWorkflow.deployed) return res.status(403).json({ error: 'Workflow is not deployed' });
     const state = await workflowParser.execute(fullWorkflow, JSON.stringify(req.body), {
       accountId: platformAccountId,
       delegateKey: platformDelegateKey,

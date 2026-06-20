@@ -18,7 +18,7 @@
     "dev:runtime": "npm -w @m2a/runtime run dev",
     "dev:runtime:mcp": "npm -w @m2a/runtime run dev:mcp",
     "start:runtime": "npm -w @m2a/runtime run start",
-    "start:studio": "npm -w @m2a/studio run start",
+    "start:studio": "npm -w @m2a/studio run preview",
     "start:runtime:mcp": "npm -w @m2a/runtime run start:mcp",
     "build:studio": "npm -w @m2a/studio run build",
     "build:client": "npm -w @m2a/client run build",

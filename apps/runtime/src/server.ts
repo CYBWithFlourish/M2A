@@ -149,6 +149,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'm2a-runtime', timestamp: Date.now() });
 });
 
+// Serve PRD docs
+app.get('/prd', (req, res) => {
+  res.sendFile('/home/ubuntu/Workspace/M2A/BuildDocs/UI_UX_PRD.md');
+});
+
 // zkLogin auth callback — the zkLogin service redirects here after Google OAuth
 // We forward to the Angular frontend with all query params preserved
 app.get('/auth/callback', (req, res) => {

@@ -20,7 +20,9 @@ export class WorkflowScheduler {
   private async tick() {
     try {
       const result = await db.query(
-        `SELECT * FROM workflow_schedules WHERE enabled = true`
+        `SELECT ws.* FROM workflow_schedules ws 
+         JOIN workflows w ON w.id = ws.workflow_id 
+         WHERE ws.enabled = true AND w.deployed = true`
       );
 
       for (const row of result.rows) {
