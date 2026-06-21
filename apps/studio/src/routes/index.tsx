@@ -8,7 +8,6 @@ import HowItWorksSection from "@/sections/HowItWorksSection";
 import FeaturesSection from "@/sections/FeaturesSection";
 import ArchitectureSection from "@/sections/ArchitectureSection";
 import DatasetsSection from "@/sections/DatasetsSection";
-import CTASection from "@/sections/CTASection";
 import FooterSection from "@/sections/FooterSection";
 
 export const Route = createFileRoute("/")({
@@ -37,7 +36,6 @@ function LandingPage() {
       <FeaturesSection />
       <ArchitectureSection />
       <DatasetsSection />
-      <CTASection />
       <FooterSection />
     </main>
   );
