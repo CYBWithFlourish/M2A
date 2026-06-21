@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { LandingNavbar } from "@/components/landing-navbar";
 import HeroSection from "@/sections/HeroSection";
 import ProblemSection from "@/sections/ProblemSection";
@@ -22,6 +23,11 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
+  useEffect(() => {
+    document.body.style.overflow = 'auto';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   return (
     <main className="min-h-screen bg-surface text-foreground">
       <LandingNavbar />
