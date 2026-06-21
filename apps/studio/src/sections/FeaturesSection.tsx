@@ -11,9 +11,33 @@ const NODE_CATEGORIES = [
   { label: 'Storage', count: 1, items: ['IPFS Upload'] },
 ];
 
+const CARDS = [...NODE_CATEGORIES, ...NODE_CATEGORIES, ...NODE_CATEGORIES];
+
+function CardItem({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div
+      className="shrink-0 w-[220px] h-[220px] rounded-3xl p-5 flex flex-col"
+      style={{
+        background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, #111318 50%, rgba(139,92,246,0.04) 100%)',
+        border: '1px solid rgba(139, 92, 246, 0.15)',
+      }}
+    >
+      <h3 className="text-lg font-bold text-white mb-3">{label}</h3>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 flex-1 overflow-hidden">
+        {items.map((item) => (
+          <p key={item} className="text-xs text-slate-400 truncate">{item}</p>
+        ))}
+      </div>
+      <span className="text-[10px] font-bold text-primary uppercase tracking-wider mt-auto">
+        {label === 'DeFi' ? '12' : label === 'Web2' ? '7' : label === 'Triggers' ? '6' : label === 'Blockchain' ? '5' : label === 'AI Agents' ? '4' : label === 'Logic/Data' ? '7' : label === 'Oracles' ? '2' : label === 'Bridge' ? '2' : label === 'NFT' ? '3' : '1'} nodes
+      </span>
+    </div>
+  );
+}
+
 export default function FeaturesSection() {
   return (
-    <section id="features" className="bg-surface-low">
+    <section id="features" className="bg-surface-low overflow-hidden">
       <div className="mx-auto max-w-[1200px] px-6 py-24 md:py-36">
         <div className="text-center mb-16">
           <h2 className="font-display text-3xl sm:text-4xl md:text-[42px] font-bold tracking-tight text-black dark:text-white leading-tight">
@@ -22,29 +46,15 @@ export default function FeaturesSection() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-          {NODE_CATEGORIES.map((cat) => (
-            <div
-              key={cat.label}
-              className="rounded-3xl p-7 flex flex-col justify-between min-h-[260px] dark:bg-gradient-to-br dark:from-[rgba(139,92,246,0.08)] dark:via-[#0f1117] dark:to-[rgba(139,92,246,0.04)] bg-gradient-to-br from-[#f8f9fc] via-[#f0f1f5] to-[#f8f9fc] border border-slate-200 dark:border-[rgba(139,92,246,0.2)]"
-            >
-              <div>
-                <h3 className="font-display text-2xl font-bold text-white mb-4">
-                  {cat.label}
-                </h3>
-                <div className="space-y-1.5">
-                  {cat.items.map((item) => (
-                    <p key={item} className="text-sm text-slate-400">{item}</p>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-4">
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                  {cat.count} nodes
-                </span>
-              </div>
-            </div>
-          ))}
+        <div className="relative">
+          <div
+            className="flex gap-5 animate-marquee"
+            style={{ width: 'max-content' }}
+          >
+            {CARDS.map((cat, i) => (
+              <CardItem key={`${cat.label}-${i}`} label={cat.label} items={cat.items} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
