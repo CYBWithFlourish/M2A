@@ -9,14 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
-import { DAppKitProvider } from "@mysten/dapp-kit-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "../lib/theme";
 import { WorkflowProvider } from "../lib/workflow-context";
 import { SuiProvider } from "../lib/sui-provider";
-import { dAppKit } from "../lib/dapp-kit";
 
 function NotFoundComponent() {
   return (
@@ -131,12 +129,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SuiProvider>
-          <DAppKitProvider dAppKit={dAppKit}>
-            <WorkflowProvider>
-              <Outlet />
-              <Toaster richColors position="bottom-right" />
-            </WorkflowProvider>
-          </DAppKitProvider>
+          <WorkflowProvider>
+            <Outlet />
+            <Toaster richColors position="bottom-right" />
+          </WorkflowProvider>
         </SuiProvider>
       </ThemeProvider>
     </QueryClientProvider>
