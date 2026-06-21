@@ -76,19 +76,23 @@ export class SuiReader {
     try {
       do {
         const pageResult: { hasNextPage: boolean; cursor: string | null; dynamicFields: any[] } = await this.client.listDynamicFields({ parentId: registryId, cursor, limit: 50 });
-        const ids: string[] = [];
+        const policyIds: string[] = [];
         for (const entry of pageResult.dynamicFields) {
-          if (entry.$kind === 'DynamicObject' && entry.childId) {
-            ids.push(entry.childId);
+          if (entry.$kind !== 'DynamicObject' || !entry.childId) continue;
+          // Fetch the Field<address, ID> entry to get the policy ID from its value
+          const fieldObj = await this.client.getObject({ objectId: entry.childId, include: { json: true } });
+          const fieldData = (fieldObj as any)?.object?.json;
+          if (fieldData?.value) {
+            policyIds.push(String(fieldData.value));
           }
         }
-        if (ids.length > 0) {
-          const batch = await this.client.getObjects({ objectIds: ids, include: { json: true } });
+        if (policyIds.length > 0) {
+          const batch = await this.client.getObjects({ objectIds: policyIds, include: { json: true } });
           for (const item of batch.objects) {
             if ('json' in item && item.json) {
-              const fields = item.json as Record<string, unknown>;
-              if (String(fields.owner ?? '') === ownerAddress) {
-                results.push(parsePolicyFields(item.objectId, fields));
+              const policy = item.json as Record<string, unknown>;
+              if (String(policy.owner ?? '') === ownerAddress) {
+                results.push(parsePolicyFields(item.objectId, policy));
               }
             }
           }
