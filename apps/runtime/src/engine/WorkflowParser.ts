@@ -235,14 +235,11 @@ export class WorkflowParser {
       timestamp: Date.now(),
     });
 
+    const MAX_FALLBACK_DEPTH = 3;
     if (state.status === 'failed' && workflow.errorFallbackId) {
+      const visitedWorkflows = new Set<string>();
       try {
-        const fallbackWorkflow = await db.getWorkflow(workflow.errorFallbackId);
-        if (fallbackWorkflow) {
-          console.log(`[WorkflowParser] Running error fallback: ${fallbackWorkflow.name}`);
-          const errorContext = { originalWorkflow: workflow.name, error: state.outputs['_error'] || 'Unknown error', state };
-          await this.execute(fallbackWorkflow, JSON.stringify(errorContext), userContext, onEvent);
-        }
+        await this.executeErrorFallback(workflow, state, userContext, onEvent, visitedWorkflows, 0, MAX_FALLBACK_DEPTH);
       } catch (fbErr) {
         console.error('[WorkflowParser] Error fallback also failed:', fbErr);
       }
@@ -250,5 +247,46 @@ export class WorkflowParser {
 
     console.log(`[WorkflowParser] Workflow '${workflow.name}' finished with status: ${state.status}`);
     return state;
+  }
+
+  private async executeErrorFallback(
+    workflow: WorkflowDefinition,
+    state: WorkflowState,
+    userContext: UserContext & { delegateKey: string; accountId: string },
+    onEvent: ((event: WorkflowEvent) => void) | undefined,
+    visitedWorkflows: Set<string>,
+    depth: number,
+    maxDepth: number
+  ): Promise<void> {
+    if (depth >= maxDepth) {
+      console.error(`[WorkflowParser] Max fallback depth (${maxDepth}) reached. Stopping fallback chain.`);
+      return;
+    }
+
+    if (!workflow.errorFallbackId) return;
+
+    if (visitedWorkflows.has(workflow.errorFallbackId)) {
+      console.error(`[WorkflowParser] Cycle detected: ${workflow.id || workflow.name} -> ${workflow.errorFallbackId}. Stopping fallback chain.`);
+      return;
+    }
+    visitedWorkflows.add(workflow.errorFallbackId);
+
+    const fallbackWorkflow = await db.getWorkflow(workflow.errorFallbackId);
+    if (!fallbackWorkflow) {
+      console.error(`[WorkflowParser] Error fallback workflow '${workflow.errorFallbackId}' not found.`);
+      return;
+    }
+
+    console.log(`[WorkflowParser] Running error fallback (depth ${depth + 1}): ${fallbackWorkflow.name}`);
+    const errorContext = {
+      originalWorkflow: workflow.name,
+      error: state.outputs['_error'] || 'Unknown error',
+      state,
+    };
+    const fallbackState = await this.execute(fallbackWorkflow, JSON.stringify(errorContext), userContext, onEvent);
+
+    if (fallbackState.status === 'failed' && fallbackWorkflow.errorFallbackId) {
+      await this.executeErrorFallback(fallbackWorkflow, fallbackState, userContext, onEvent, visitedWorkflows, depth + 1, maxDepth);
+    }
   }
 }

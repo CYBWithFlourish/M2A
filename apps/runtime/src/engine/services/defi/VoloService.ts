@@ -1,6 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-
-const VOLO_PACKAGE = '0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55';
+import { voloPackageId } from '../../../config.js';
 
 export const voloService = {
   id: 'volo',
@@ -11,7 +10,7 @@ export const voloService = {
     const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.amountMist))]);
     tx.moveCall({
-      target: `${VOLO_PACKAGE}::volo::stake`,
+      target: `${voloPackageId()}::volo::stake`,
       arguments: [coin],
     });
     return tx;
@@ -20,7 +19,7 @@ export const voloService = {
   buildUnstakeTx(params: { vSuiAmount: string; walletAddress: string }): Transaction {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${VOLO_PACKAGE}::volo::unstake`,
+      target: `${voloPackageId()}::volo::unstake`,
       arguments: [tx.pure.u64(BigInt(params.vSuiAmount))],
     });
     return tx;

@@ -80,6 +80,19 @@ export async function authorizeM2AAction(input: RuntimeAuthzRequest): Promise<Ru
       }
     }
 
+    // If agent record specifies protocols/tools, check those too
+    if (input.protocols && input.protocols.length > 0 && input.action) {
+      if (!input.protocols.includes(input.action)) {
+        return { allowed: false, reason: `action ${input.action} not in agent's allowed protocols`, policyVersion: 1 };
+      }
+    }
+
+    if (input.tools && input.tools.length > 0 && input.tool) {
+      if (!input.tools.includes(input.tool)) {
+        return { allowed: false, reason: `tool ${input.tool} not in agent's allowed tools`, policyVersion: 1 };
+      }
+    }
+
     return { allowed: true, policyVersion: 1 };
   } catch (err) {
     console.warn(`[authz] on-chain check failed for agent ${input.agentId}:`, err);

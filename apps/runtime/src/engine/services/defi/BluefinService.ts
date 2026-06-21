@@ -1,6 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-
-const BLUEFIN_PACKAGE = '0x1c540fb6c51d53e0c1ceb11aafc4c8db1a8e2764d857440510c34b3a03c9c3b2';
+import { bluefinPackageId } from '../../../config.js';
 
 export const bluefinService = {
   id: 'bluefin',
@@ -17,7 +16,7 @@ export const bluefinService = {
     const tx = new Transaction();
     const [margin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.marginAmount))]);
     tx.moveCall({
-      target: `${BLUEFIN_PACKAGE}::exchange::open_position`,
+      target: `${bluefinPackageId()}::exchange::open_position`,
       arguments: [
         tx.pure.string(params.market),
         tx.pure.bool(params.side === 'long'),
@@ -34,7 +33,7 @@ export const bluefinService = {
   }): Transaction {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${BLUEFIN_PACKAGE}::exchange::close_position`,
+      target: `${bluefinPackageId()}::exchange::close_position`,
       arguments: [tx.object(params.positionId)],
     });
     return tx;

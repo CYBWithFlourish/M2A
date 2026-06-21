@@ -1,4 +1,13 @@
 import { Transaction } from '@mysten/sui/transactions';
+import { alphaFiPackageId } from '../../../config.js';
+
+const alphaFiPkg = () => {
+  const pkg = alphaFiPackageId();
+  if (pkg === '0x0') {
+    console.warn('[AlphaFi] ALPHAFI_PACKAGE_ID not configured. Set ALPHAFI_PACKAGE_ID_testnet in .env');
+  }
+  return pkg;
+};
 
 export const alphaFiService = {
   id: 'alphafi',
@@ -14,7 +23,7 @@ export const alphaFiService = {
     const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.amount))]);
     tx.moveCall({
-      target: '0x0::alphafi::deposit',
+      target: `${alphaFiPkg()}::alphafi::deposit`,
       arguments: [
         tx.pure.string(params.vaultType),
         coin,
@@ -30,7 +39,7 @@ export const alphaFiService = {
   }): Transaction {
     const tx = new Transaction();
     tx.moveCall({
-      target: '0x0::alphafi::withdraw',
+      target: `${alphaFiPkg()}::alphafi::withdraw`,
       arguments: [
         tx.pure.string(params.vaultType),
         tx.pure.u64(BigInt(params.shares)),

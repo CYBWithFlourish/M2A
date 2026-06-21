@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import crypto from 'crypto';
+import { createSuiClient } from '../config.js';
+import { fromBase64 } from '@mysten/sui/utils';
 
 export const router = Router();
 
@@ -12,6 +14,8 @@ interface AgentRecord {
   budget_cap: number;
   protocols: string[];
   tools: string[];
+  on_chain_agent_id: string;
+  tx_digest: string;
   created_at: string;
   last_run_at: string | null;
 }
@@ -43,26 +47,69 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/agents — register an agent
+// POST /api/v1/agents — relay signed tx to Sui, store agent record
 router.post('/', async (req, res) => {
   try {
-    const { id, name, walletAddress, ownerAddress, budgetCap, protocols, tools } = req.body;
-    if (!id) return res.status(400).json({ error: 'id is required' });
+    const { txBytes, digest, name, walletAddress, ownerAddress, budgetCap, protocols, tools, signatures } = req.body;
 
+    if (!txBytes) {
+      return res.status(400).json({ error: 'txBytes is required' });
+    }
+
+    const suiClient = createSuiClient();
+    const txBytesBytes = fromBase64(txBytes);
+
+    const response = await suiClient.executeTransaction({
+      transaction: txBytesBytes,
+      signatures: signatures || [],
+      include: { effects: true, events: true },
+    });
+
+    if (response.$kind !== 'Transaction') {
+      return res.status(500).json({ error: 'Transaction failed', details: response.FailedTransaction });
+    }
+
+    const txDigest = response.Transaction.digest || digest;
+
+    let onChainAgentId = '';
+    const changedObjects: Array<{ objectId: string; idOperation: string | null }> =
+      (response.Transaction.effects as any)?.changedObjects || [];
+    const created = changedObjects.filter((c) => c.idOperation === 'Created');
+    if (created.length > 0) {
+      onChainAgentId = created[0].objectId;
+    }
+
+    const agentId = crypto.randomUUID();
     const result = await db.query(
-      `INSERT INTO agents (id, name, wallet_address, owner_address, budget_cap, protocols, tools, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+      `INSERT INTO agents (id, name, wallet_address, owner_address, budget_cap, protocols, tools, on_chain_agent_id, tx_digest, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
        ON CONFLICT (id) DO UPDATE
-       SET name = EXCLUDED.name,
-           wallet_address = EXCLUDED.wallet_address,
-           owner_address = EXCLUDED.owner_address,
-           budget_cap = EXCLUDED.budget_cap,
-           protocols = EXCLUDED.protocols,
-           tools = EXCLUDED.tools
+       SET on_chain_agent_id = EXCLUDED.on_chain_agent_id,
+           tx_digest = EXCLUDED.tx_digest
        RETURNING *`,
-      [id, name || `Agent ${id.slice(0, 8)}`, walletAddress || '', ownerAddress || '', budgetCap || 0, JSON.stringify(protocols || []), JSON.stringify(tools || [])],
+      [
+        agentId,
+        name || `Agent ${agentId.slice(0, 8)}`,
+        walletAddress || '',
+        ownerAddress || '',
+        budgetCap || 0,
+        JSON.stringify(protocols || []),
+        JSON.stringify(tools || []),
+        onChainAgentId,
+        txDigest,
+      ],
     );
-    res.status(201).json(result.rows[0]);
+
+    res.status(201).json({
+      id: result.rows[0].id,
+      name: result.rows[0].name,
+      status: 'active',
+      budgetUsed: 0,
+      budgetCap: result.rows[0].budget_cap,
+      address: result.rows[0].wallet_address,
+      onChainId: result.rows[0].on_chain_agent_id,
+      txDigest: result.rows[0].tx_digest,
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

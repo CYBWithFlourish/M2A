@@ -52,4 +52,40 @@ export function suilendPackageId(): string {
   return resolveNetworkVar('SUILEND_PACKAGE_ID') || '0x5df60e6f0e7d7b5e6f8e0a697e5e6d6a5e5b6d5e6f6d7e5a6f5e5b6d5e6f6d';
 }
 
+export function bluefinPackageId(): string {
+  return resolveNetworkVar('BLUEFIN_PACKAGE_ID') || '0x1c540fb6c51d53e0c1ceb11aafc4c8db1a8e2764d857440510c34b3a03c9c3b2';
+}
+
+export function voloPackageId(): string {
+  return resolveNetworkVar('VOLO_PACKAGE_ID') || '0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55';
+}
+
+export function haedalPackageId(): string {
+  return resolveNetworkVar('HAEDAL_PACKAGE_ID') || '0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d';
+}
+
+export function wormholePackageId(): string {
+  return resolveNetworkVar('WORMHOLE_PACKAGE_ID') || '0x5306f64e312b581766351c07af79c72fcb1cd25147157fdc2f8ad76de9a3fb6a';
+}
+
+export function wormholeStateId(): string {
+  return resolveNetworkVar('WORMHOLE_STATE_ID') || '0xaeab97f96cf9877fee2883315d459552b2b921edc16d7ceac6eab944dd88919c';
+}
+
+export function suiBridgePackageId(): string {
+  return resolveNetworkVar('SUI_BRIDGE_PACKAGE_ID') || '0x9cf66f15bc07651af26ad0f79397c88cf03679b1b55a89cce5984f7bb27c8bda';
+}
+
+export function alphaFiPackageId(): string {
+  return resolveNetworkVar('ALPHAFI_PACKAGE_ID') || '0x0';
+}
+
+export function bucketTreasuryId(): string {
+  return resolveNetworkVar('BUCKET_TREASURY_ID') || '0x0';
+}
+
+export function bucketPackageId(): string {
+  return resolveNetworkVar('BUCKET_PACKAGE_ID') || '0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2';
+}
+
 export const SUI_CLOCK = '0x6';

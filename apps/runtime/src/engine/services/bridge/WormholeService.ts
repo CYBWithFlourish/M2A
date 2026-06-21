@@ -1,7 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-
-const WORMHOLE_PACKAGE = '0x5306f64e312b581766351c07af79c72fcb1cd25147157fdc2f8ad76de9a3fb6a';
-const WORMHOLE_STATE = '0xaeab97f96cf9877fee2883315d459552b2b921edc16d7ceac6eab944dd88919c';
+import { wormholePackageId, wormholeStateId } from '../../../config.js';
 
 export const wormholeService = {
   id: 'wormhole',
@@ -18,9 +16,9 @@ export const wormholeService = {
     const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.amount))]);
     tx.moveCall({
-      target: `${WORMHOLE_PACKAGE}::token_bridge::transfer_tokens`,
+      target: `${wormholePackageId()}::token_bridge::transfer_tokens`,
       arguments: [
-        tx.object(WORMHOLE_STATE),
+        tx.object(wormholeStateId()),
         coin,
         tx.pure.u16(params.targetChain),
         tx.pure.vector('u8', Buffer.from(params.targetAddress.slice(2), 'hex')),

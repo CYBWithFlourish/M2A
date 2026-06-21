@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { Transaction } from "@mysten/sui/transactions";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+// Sui SDK imports for tx building and signing
 import { Check, Loader2, Search, X, ExternalLink, Wallet, ArrowRight, AlertCircle } from "lucide-react";
 import { useWorkflow, type Agent, type CanvasNode, type Connection } from "@/lib/workflow-context";
 import { api } from "@/lib/api";
@@ -145,6 +148,34 @@ export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose:
 const PROTOCOLS = ["Aftermath", "Navi", "Cetus", "Bluefin", "Suilend"];
 const TOOLS = ["Walrus Storage", "Sui RPC", "Price Feeds", "AI Memory"];
 
+const WALNUT_PACKAGE = import.meta.env.VITE_M2A_PACKAGE_ID;
+const WALNUT_REGISTRY = import.meta.env.VITE_M2A_REGISTRY_ID;
+
+async function buildAndSignCreateAgentTx(
+  walletAddress: string,
+  ownerAddress: string,
+  budgetCap: number,
+): Promise<{ txBytes: string; txSignature: string }> {
+  const stored = localStorage.getItem('zklogin_ephemeral');
+  if (!stored) throw new Error('No ephemeral key found. Please sign in again.');
+  const { secretKey } = JSON.parse(stored);
+  const keypair = Ed25519Keypair.fromSecretKey(secretKey);
+
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${WALNUT_PACKAGE}::agent::register_agent`,
+    arguments: [
+      tx.object(WALNUT_REGISTRY),
+      tx.pure.address(walletAddress),
+      tx.pure.address(ownerAddress),
+      tx.pure.u64(BigInt(budgetCap * 1_000_000_000)),
+    ],
+  });
+
+  const { bytes, signature } = await tx.sign({ signer: keypair });
+  return { txBytes: bytes, txSignature: signature };
+}
+
 export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { dispatch } = useWorkflow();
   const walletAccount = useCurrentAccount();
@@ -154,7 +185,6 @@ export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: (
   const [step, setStep] = useState<"form" | "auth" | "signing" | "done">("form");
   const [name, setName] = useState("");
   const [budget, setBudget] = useState(50);
-  const [fund, setFund] = useState(10);
   const [protocols, setProtocols] = useState<string[]>([]);
   const [tools, setTools] = useState<string[]>([]);
   const [txDigest, setTxDigest] = useState("");
@@ -175,16 +205,19 @@ export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: (
     }
     setStep("signing");
     try {
+      const { txBytes, txSignature } = await buildAndSignCreateAgentTx(address!, address!, budget);
       const result = await api.registerAgent({
         name,
+        walletAddress: address,
+        ownerAddress: address,
         budgetCap: budget,
-        initialFund: fund,
         protocols,
         tools,
-        address,
+        txBytes,
+        signatures: [txSignature],
       });
       const agent: Agent = {
-        id: result.id || `a_${Date.now()}`,
+        id: result.id || 'a_' + Date.now(),
         name: result.name || name,
         status: result.status === "active" ? "active" : "inactive",
         budgetUsed: result.budgetUsed ?? 0,
@@ -192,7 +225,7 @@ export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: (
         address: result.address || address || "",
       };
       dispatch({ type: "add_agent", agent });
-      setTxDigest(result.txDigest || "");
+      setTxDigest(result.txDigest || '');
       setStep("done");
       notify.success('Agent created');
     } catch (err) {
@@ -242,17 +275,7 @@ export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">SUI</span>
                 </div>
               </Field>
-              <Field label="Initial Fund">
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={fund}
-                    onChange={(e) => setFund(Number(e.target.value))}
-                    className="h-11 w-full rounded-md border border-border bg-surface-container pl-3.5 pr-12 text-sm outline-none focus:ring-2 focus:ring-ring"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">SUI</span>
-                </div>
-              </Field>
+
             </div>
             <Field label="Protocol Permissions">
               <Pills options={PROTOCOLS} selected={protocols} onChange={setProtocols} />

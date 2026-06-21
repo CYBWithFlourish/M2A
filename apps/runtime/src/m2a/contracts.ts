@@ -28,6 +28,14 @@ export interface AgentPolicyOnChain {
   isActive: boolean;
 }
 
+/**
+ * Build a `create_agent` transaction.
+ *
+ * Agent creation tx is now built and signed client-side and relayed through
+ * POST /api/v1/agents. This function is maintained as a server-side utility
+ * for the topUpAgent flow (TopUpDialog in the studio) and for auto-funding
+ * or topping up agents.
+ */
 export function buildCreateAgentTx(
   registryId: string,
   agentWallet: string,

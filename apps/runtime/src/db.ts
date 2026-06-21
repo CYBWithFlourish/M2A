@@ -106,6 +106,13 @@ export async function initDb() {
     `);
 
     await client.query(`
+      ALTER TABLE agents ADD COLUMN IF NOT EXISTS on_chain_agent_id TEXT NOT NULL DEFAULT '';
+    `);
+    await client.query(`
+      ALTER TABLE agents ADD COLUMN IF NOT EXISTS tx_digest TEXT NOT NULL DEFAULT '';
+    `);
+
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_agents_owner ON agents (owner_address);
     `);
 

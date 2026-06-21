@@ -97,6 +97,7 @@ export const NODE_CATALOG: NodeDef[] = [
       ], defaultValue: "llama-3.3-70b-versatile" },
       { key: "temperature", label: "Temperature", type: "number", placeholder: "0.7" },
       { key: "maxTokens", label: "Max Tokens", type: "number", placeholder: "2048" },
+      { key: "agentId", label: "Linked Agent", type: "select", options: [] },
     ],
   },
   {
@@ -329,6 +330,49 @@ export const NODE_CATALOG: NodeDef[] = [
         { value: "above", label: "Above" },
         { value: "below", label: "Below" },
       ], defaultValue: "above" },
+    ],
+  },
+  {
+    type: "deepbook_trade",
+    label: "DeepBook Trade",
+    description: "Execute swaps and limit orders on DeepBook DEX",
+    category: "DeFi",
+    badge: "DeFi",
+    color: "#8B5CF6",
+    icon: TrendingUp,
+    fields: [
+      { key: "action", label: "Action", type: "select", options: [
+        { value: "swap", label: "Swap" },
+        { value: "limit_order", label: "Limit Order" },
+        { value: "cancel", label: "Cancel Order" },
+      ], defaultValue: "swap" },
+      { key: "pool", label: "Pool ID", type: "text", placeholder: "0x..." },
+      { key: "amount", label: "Amount (SUI)", type: "number", placeholder: "10" },
+      { key: "side", label: "Side", type: "select", options: [
+        { value: "bid", label: "Buy" },
+        { value: "ask", label: "Sell" },
+      ], defaultValue: "bid" },
+      { key: "price", label: "Limit Price", type: "number", placeholder: "Optional for limit orders" },
+    ],
+  },
+  {
+    type: "deepbook_lend",
+    label: "DeepBook Lend",
+    description: "Deposit, withdraw, borrow, or repay on DeepBook Lending",
+    category: "DeFi",
+    badge: "DeFi",
+    color: "#8B5CF6",
+    icon: Coins,
+    fields: [
+      { key: "action", label: "Action", type: "select", options: [
+        { value: "deposit", label: "Deposit" },
+        { value: "withdraw", label: "Withdraw" },
+        { value: "borrow", label: "Borrow" },
+        { value: "repay", label: "Repay" },
+      ], defaultValue: "deposit" },
+      { key: "pool", label: "Pool ID", type: "text", placeholder: "0x..." },
+      { key: "amount", label: "Amount", type: "number", placeholder: "10" },
+      { key: "token", label: "Token Type", type: "text", placeholder: "0x2::sui::SUI" },
     ],
   },
 

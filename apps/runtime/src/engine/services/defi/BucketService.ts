@@ -1,7 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-
-const BUCKET_PACKAGE = '0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2';
-const BUCKET_TREASURY = '0x0';
+import { bucketPackageId, bucketTreasuryId } from '../../../config.js';
 
 export const bucketService = {
   id: 'bucket',
@@ -12,8 +10,8 @@ export const bucketService = {
     const tx = new Transaction();
     const [collateral] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.collateralAmount))]);
     tx.moveCall({
-      target: `${BUCKET_PACKAGE}::tadb::mint`,
-      arguments: [tx.object(BUCKET_TREASURY), collateral],
+      target: `${bucketPackageId()}::tadb::mint`,
+      arguments: [tx.object(bucketTreasuryId()), collateral],
     });
     return tx;
   },
@@ -21,8 +19,8 @@ export const bucketService = {
   buildRedeemTx(params: { buckAmount: string; walletAddress: string }): Transaction {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${BUCKET_PACKAGE}::tadb::redeem`,
-      arguments: [tx.object(BUCKET_TREASURY), tx.pure.u64(BigInt(params.buckAmount))],
+      target: `${bucketPackageId()}::tadb::redeem`,
+      arguments: [tx.object(bucketTreasuryId()), tx.pure.u64(BigInt(params.buckAmount))],
     });
     return tx;
   },

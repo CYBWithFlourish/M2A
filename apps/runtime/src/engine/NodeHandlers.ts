@@ -16,6 +16,7 @@ import { pythService } from './services/PythService.js';
 import { switchboardService } from './services/SwitchboardService.js';
 import { tradeportService } from './services/nft/TradePortService.js';
 import { eventTriggerService } from './services/EventTriggerService.js';
+import { storeToWalrus, fetchFromWalrus } from './tools/WalrusTools.js';
 
 export interface NodeHandlerResult {
   output: string;
@@ -258,40 +259,35 @@ export class FileNodeHandler implements NodeHandler {
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
     const action = (data?.action as string) || 'store';
+    const normalizedAction = action === 'read' ? 'fetch' : action === 'write' ? 'store' : action;
     const content = inputs[0] || '';
     const blobId = (data?.blobId as string) || inputs[1] || '';
 
-    if (action === 'store') {
-      const sidecarUrl = process.env.WALRUS_SIDECAR_URL || 'http://localhost:9000';
-      try {
-        const res = await fetch(`${sidecarUrl}/walrus/upload`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: Buffer.from(content).toString('base64'),
-            keyIndex: 0,
-            namespace: 'file_node',
-            epochs: 1,
-            deferTransfer: false,
-          }),
-        });
-        if (!res.ok) throw new Error(`Sidecar upload failed: ${res.status}`);
-        const result = await res.json();
+    try {
+      if (normalizedAction === 'store') {
+        const result = await storeToWalrus.execute({ content, contentType: 'application/json' }, context);
         return {
           output: `Stored to Walrus. Blob ID: ${result.blobId}`,
           metadata: { blobId: result.blobId },
         };
-      } catch {
+      } else if (normalizedAction === 'fetch') {
+        if (!blobId) {
+          return { output: 'Error: No blob ID provided for fetch' };
+        }
+        const result = await fetchFromWalrus.execute({ blobId }, context);
+        return {
+          output: typeof result === 'string' ? result : JSON.stringify(result),
+          metadata: { blobId },
+        };
+      }
+
+      return { output: `Unknown file action: ${action}` };
+    } catch (err: any) {
+      if (normalizedAction === 'store') {
         const fakeId = `blob_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         return { output: `[Stub] Stored. ID: ${fakeId}`, metadata: { blobId: fakeId } };
       }
-    }
-
-    if (action === 'fetch') {
-      if (!blobId) {
-        return { output: 'Error: No blob ID provided for fetch' };
-      }
-      return { output: `Walrus fetch: route through MemoryRouter recall for production use. Blob ID: ${blobId}`, metadata: { blobId } };
+      return { output: `[Stub] File ${normalizedAction} — Walrus unavailable: ${err.message}` };
     }
 
     return { output: `Unknown file action: ${action}` };
@@ -350,10 +346,10 @@ export class WebhookTriggerNodeHandler implements NodeHandler {
 
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
-    const token = (data?.webhookToken as string) || `wh_${node.id}`;
+    const webhookId = (data?.webhookId as string) || node.id;
     return {
-      output: `Webhook trigger ready. Token: ${token}`,
-      metadata: { webhookToken: token, url: `/api/v1/execute/trigger/${token}` },
+      output: `Webhook endpoint ready: POST /api/v1/webhook/${webhookId}`,
+      metadata: { webhookId },
     };
   }
 }
@@ -365,12 +361,22 @@ export class ScheduleTriggerNodeHandler implements NodeHandler {
 
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
-    const cron = (data?.cronExpression as string) || '0 * * * *';
+    const cronExpression = (data?.cron as string) || '*/5 * * * *';
+    const intervalMs = parseCronToMs(cronExpression) || 5 * 60 * 1000;
     return {
-      output: `Schedule trigger active. Cron: ${cron}`,
-      metadata: { cronExpression: cron },
+      output: `Scheduled: ${cronExpression} (every ${intervalMs / 1000}s)`,
+      metadata: { cronExpression, intervalMs },
     };
   }
+}
+
+function parseCronToMs(cron: string): number | null {
+  const parts = cron.split(' ');
+  if (parts.length >= 1 && parts[0].startsWith('*/')) {
+    const minutes = parseInt(parts[0].slice(2), 10);
+    if (!isNaN(minutes)) return minutes * 60 * 1000;
+  }
+  return null;
 }
 
 export class MergeNodeHandler implements NodeHandler {
@@ -665,15 +671,16 @@ export class SwitchboardNodeHandler implements NodeHandler {
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
     const action = (data?.action as string) || 'get_feed';
+    const normalizedAction = action === 'get_data' ? 'get_feed' : action;
     const feedAddress = (data?.feedAddress as string) || inputs[0] || '';
 
-    if (action === 'request_update') {
+    if (normalizedAction === 'request_update') {
       const result = await switchboardService.requestUpdate({ feedAddress, walletAddress: context.accountId });
       return { output: JSON.stringify(result), metadata: { protocol: 'switchboard', action: 'request_update' } };
     }
 
     const feed = await switchboardService.getFeed({ feedAddress });
-    return { output: JSON.stringify(feed), metadata: { protocol: 'switchboard', action: 'get_feed' } };
+    return { output: JSON.stringify(feed), metadata: { protocol: 'switchboard', action: normalizedAction } };
   }
 }
 
@@ -705,18 +712,37 @@ export class EventTriggerNodeHandler implements NodeHandler {
 
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
-    const packageId = (data?.packageId as string) || '';
-    const moduleName = (data?.moduleName as string) || '';
-    const eventName = (data?.eventName as string) || '';
+    const eventType = (data?.eventType as string) || (data?.eventName as string) || '';
+    const contractAddress = (data?.contractAddress as string) || (data?.packageId as string) || '';
 
-    if (!packageId || !eventName) {
-      return { output: 'Event trigger: Missing package or event name' };
+    if (!eventType) {
+      return { output: 'Event trigger: Missing event type' };
     }
 
-    return {
-      output: `Event trigger active: ${packageId}::${moduleName}::${eventName}`,
-      metadata: { packageId, moduleName, eventName, triggerType: 'on_chain_event' },
-    };
+    try {
+      const { suiRpcUrl } = await import('../config.js');
+      const rpcUrl = suiRpcUrl();
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'suix_getEvents',
+          params: [{ MoveModule: { package: contractAddress, module: (data?.moduleName as string) || '' } }, null, 1],
+        }),
+      });
+      const json = await res.json();
+      return {
+        output: `Monitoring ${eventType} events on ${contractAddress}`,
+        metadata: { eventType, contractAddress, latestCursor: json.result?.nextCursor || null },
+      };
+    } catch (err: any) {
+      return {
+        output: `Monitoring ${eventType} events on ${contractAddress} (RPC unavailable: ${err.message})`,
+        metadata: { eventType, contractAddress },
+      };
+    }
   }
 }
 
@@ -815,17 +841,31 @@ export class TwitterNodeHandler implements NodeHandler {
   canHandle(node: WorkflowNode): boolean { return (node.type as string) === 'twitter'; }
   async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
     const data = node.data as Record<string, unknown> | undefined;
-    const text = inputs[0] || '';
+    const action = (data?.action as string) || 'post';
+    const normalizedAction = action === 'post_tweet' ? 'post' : action;
     const bearerToken = (data?.bearerToken as string) || '';
-    if (!text || !bearerToken) return { output: 'Error: Twitter bearer token and text required' };
+    if (!bearerToken) return { output: 'Error: Twitter bearer token required' };
+
     try {
+      if (normalizedAction === 'search') {
+        const query = (data?.query as string) || inputs[0] || '';
+        if (!query) return { output: 'Error: Search query required' };
+        const res = await fetch(`https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=10`, {
+          headers: { Authorization: `Bearer ${bearerToken}` },
+        });
+        const searchData = await res.json();
+        return { output: JSON.stringify(searchData), metadata: { action: 'search', query } };
+      }
+
+      const text = inputs[0] || '';
+      if (!text) return { output: 'Error: Tweet text required' };
       const res = await fetch('https://api.twitter.com/2/tweets', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${bearerToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.slice(0, 280) }),
       });
-      const data = await res.json();
-      return { output: `Tweet posted: ${(data as any).data?.id || 'unknown'}`, metadata: data };
+      const tweetData = await res.json();
+      return { output: `Tweet posted: ${(tweetData as any).data?.id || 'unknown'}`, metadata: tweetData };
     } catch (err: any) { return { output: `Twitter error: ${err.message}` }; }
   }
 }

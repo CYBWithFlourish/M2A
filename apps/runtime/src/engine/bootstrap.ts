@@ -16,6 +16,9 @@ import { eventTriggerSkill } from './skills/EventTriggerSkill.js';
 import { wormholeSkill } from './skills/bridge/WormholeSkill.js';
 import { suiBridgeSkill } from './skills/bridge/SuiBridgeSkill.js';
 import { alphaFiSkill } from './skills/defi/AlphaFiSkill.js';
+import { naviSkill } from './skills/defi/NaviSkill.js';
+import { suilendSkill } from './skills/defi/SuilendSkill.js';
+import { aftermathSwapSkill } from './skills/defi/AftermathSkill.js';
 
 import { serviceRegistry } from './services/ServiceRegistry.js';
 import { suiTxService } from './services/sui/SuiTxService.js';
@@ -48,6 +51,9 @@ export function bootstrapEngine() {
   skillRegistry.register(wormholeSkill);
   skillRegistry.register(suiBridgeSkill);
   skillRegistry.register(alphaFiSkill);
+  skillRegistry.register(naviSkill);
+  skillRegistry.register(suilendSkill);
+  skillRegistry.register(aftermathSwapSkill);
   skillRegistry.register(nftSkill);
   console.log(`✅ Registered ${skillRegistry.getAll().length} skills`);
 

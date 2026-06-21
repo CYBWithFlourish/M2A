@@ -19,8 +19,26 @@ export const pythService = {
   },
 
   async getEMA(params: { priceFeedId: string }): Promise<any> {
-    const price = await this.getPrice(params);
-    return { ...price, type: 'ema' };
+    try {
+      const response = await fetch(`https://hermes.pyth.network/v2/updates/price/ema/${params.priceFeedId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(`Hermes returned ${response.status}`);
+      const data = await response.json();
+      const priceFeed = data.parsed?.[0]?.price;
+      if (!priceFeed) throw new Error('No EMA price in response');
+      return {
+        price: priceFeed.price,
+        confidence: priceFeed.conf,
+        exponent: priceFeed.expo,
+        publishTime: priceFeed.publish_time,
+        type: 'ema',
+        source: 'pyth_hermes',
+      };
+    } catch (error) {
+      console.error('[Pyth] getEMA failed, falling back to getPrice:', error);
+      return this.getPrice(params);
+    }
   },
 
   KNOWN_FEEDS: {

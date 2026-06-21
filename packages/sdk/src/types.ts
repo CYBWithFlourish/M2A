@@ -15,7 +15,7 @@ export interface RecallMemory {
 
 export interface BaseWorkflowNode {
   id: string;
-  type: 'agent' | 'input' | 'output' | 'condition' | 'walrus' | 'sui' | 'http' | 'conditional' | 'file' | 'agent_spawn' | 'webhook_trigger' | 'schedule_trigger' | 'merge' | 'aftermath' | 'navi' | 'suilend' | 'haedal' | 'volo' | 'bucket' | 'loop' | 'code' | 'bluefin' | 'pyth' | 'switchboard' | 'tradeport' | 'event_trigger' | 'wormhole' | 'sui_bridge' | 'alphafi' | 'google_sheets' | 'airtable' | 'notion' | 'twitter' | 'rss_reader' | 'csv_parser' | 'ipfs' | 'form_trigger' | 'discord_trigger' | 'price_alert' | 'balance_monitor' | 'nft_floor_alert' | 'counter' | 'email' | 'slack' | 'discord' | 'telegram_send' | 'wait' | 'json_parser' | 'suins';
+  type: 'agent' | 'input' | 'output' | 'walrus' | 'sui' | 'http' | 'conditional' | 'file' | 'agent_spawn' | 'webhook_trigger' | 'schedule_trigger' | 'merge' | 'aftermath' | 'navi' | 'suilend' | 'haedal' | 'volo' | 'bucket' | 'loop' | 'code' | 'bluefin' | 'pyth' | 'switchboard' | 'tradeport' | 'event_trigger' | 'wormhole' | 'sui_bridge' | 'alphafi' | 'google_sheets' | 'airtable' | 'notion' | 'twitter' | 'rss_reader' | 'csv_parser' | 'ipfs' | 'form_trigger' | 'discord_trigger' | 'price_alert' | 'balance_monitor' | 'nft_floor_alert' | 'counter' | 'email' | 'slack' | 'discord' | 'telegram_send' | 'wait' | 'json_parser' | 'suins';
   label: string;
   position: { x: number; y: number };
   dependencies?: string[];

@@ -6,6 +6,31 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { AgentRunner } from './AgentRunner.js';
 import { WorkflowParser } from './WorkflowParser.js';
 
+async function retrieveFromWalrus(blobId: string): Promise<string> {
+  try {
+    const aggregatorUrl = process.env.WALRUS_AGGREGATOR_URL_testnet || 'https://aggregator.walrus-testnet.walrus.space';
+    const response = await fetch(`${aggregatorUrl}/v1/blobs/${blobId}`);
+    if (!response.ok) throw new Error(`Walrus aggregator returned ${response.status}`);
+    const text = await response.text();
+    return text;
+  } catch (error) {
+    console.error('[MemoryRouter] Cold tier retrieval failed:', error);
+    return `[COLD TIER] Retrieval failed: ${error instanceof Error ? error.message : 'unknown error'}`;
+  }
+}
+
+async function storeToWalrus(data: string): Promise<string> {
+  const publisherUrl = process.env.WALRUS_PUBLISHER_URL_testnet || 'https://publisher.walrus-testnet.walrus.space';
+  const response = await fetch(`${publisherUrl}/v1/blobs`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+  if (!response.ok) throw new Error(`Walrus publisher returned ${response.status}`);
+  const result = await response.json();
+  return result.blobId;
+}
+
 export interface HydrateOptions {
   tier?: 'hot' | 'cold';
 }
@@ -52,7 +77,9 @@ export class MemoryRouter {
     console.log('[MemoryRouter] Cold tier retrieval from Walrus blobs for:', config.read);
     const lines: string[] = [];
     for (const ns of config.read) {
-      lines.push(`[COLD TIER] Awaiting Walrus blob retrieval for namespace: ${ns}`);
+      const blobId = ns; // namespace doubles as blob ID for cold tier
+      const content = await retrieveFromWalrus(blobId);
+      lines.push(content);
     }
     return lines.join('\n') || '[COLD TIER] No blobs found.';
   }

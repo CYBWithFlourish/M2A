@@ -1,6 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-
-const HAEDAL_PACKAGE = '0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d';
+import { haedalPackageId } from '../../../config.js';
 
 export const haedalService = {
   id: 'haedal',
@@ -11,7 +10,7 @@ export const haedalService = {
     const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(params.amountMist))]);
     tx.moveCall({
-      target: `${HAEDAL_PACKAGE}::staking::stake`,
+      target: `${haedalPackageId()}::staking::stake`,
       arguments: [
         tx.object('0x1'),
         coin,
@@ -23,7 +22,7 @@ export const haedalService = {
   buildUnstakeTx(params: { haSuiAmount: string; walletAddress: string }): Transaction {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${HAEDAL_PACKAGE}::staking::unstake`,
+      target: `${haedalPackageId()}::staking::unstake`,
       arguments: [
         tx.object('0x1'),
         tx.pure.u64(BigInt(params.haSuiAmount)),

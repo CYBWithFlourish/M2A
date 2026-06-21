@@ -3,6 +3,17 @@ export interface UserContext {
   runId?: string;
 }
 
+function normalizeContext(ctx: Record<string, any>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const key of Object.keys(ctx)) {
+    normalized[key] = String(ctx[key]);
+  }
+  if (ctx.accountId && !ctx.userId) normalized.userId = ctx.accountId;
+  if (normalized.runId === undefined) normalized.runId = (ctx.runId || Date.now().toString());
+  if (ctx.agentWallet) normalized.wallet = ctx.agentWallet;
+  return normalized;
+}
+
 /**
  * Standardized namespace builders.
  * Never build namespace strings ad-hoc. Always go through here.
@@ -20,9 +31,9 @@ export const ns = {
    * Resolves a dynamic namespace template based on the user's current context.
    */
   resolve: (namespaceStr: string, ctx: UserContext) => {
-    // Basic template resolution
+    const normalized = normalizeContext(ctx as any);
     return namespaceStr
-      .replace('{userId}', ctx.userId)
-      .replace('{runId}', ctx.runId || 'default_run');
+      .replace('{userId}', normalized.userId)
+      .replace('{runId}', normalized.runId || 'default_run');
   }
 };
