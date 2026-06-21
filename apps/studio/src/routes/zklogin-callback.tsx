@@ -70,6 +70,7 @@ function ZkLoginCallback() {
         };
         localStorage.setItem("zklogin_user", JSON.stringify(session));
         localStorage.removeItem("zklogin_ephemeral");
+        window.dispatchEvent(new CustomEvent("zklogin:connected"));
 
         navigate({ to: "/" });
       } catch (err) {

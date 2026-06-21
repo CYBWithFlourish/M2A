@@ -27,13 +27,18 @@ export function SuiProvider({ children }: { children: ReactNode }) {
   const [zkLoginSession, setZkLoginSession] = useState<any>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("zklogin_user");
-    if (saved) {
-      const session = JSON.parse(saved);
-      setZkLoginSession(session);
-      setAddress(session.address);
-      setIsConnected(true);
-    }
+    const load = () => {
+      const saved = localStorage.getItem("zklogin_user");
+      if (saved) {
+        const session = JSON.parse(saved);
+        setZkLoginSession(session);
+        setAddress(session.address);
+        setIsConnected(true);
+      }
+    };
+    load();
+    window.addEventListener("zklogin:connected", load);
+    return () => window.removeEventListener("zklogin:connected", load);
   }, []);
 
   const startZkLogin = useCallback(async () => {
