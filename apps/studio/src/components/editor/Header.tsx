@@ -68,13 +68,16 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
       } catch (err) {
         setDeletingAgent(false);
         const msg = err instanceof Error ? err.message : 'Deletion failed';
-        notify.error(msg);
-        return;
+        const doDbDelete = window.confirm(
+          `On-chain deactivation failed: ${msg}\n\nDelete the database record anyway?`,
+        );
+        if (!doDbDelete) return;
+        // fall through to DB-only delete
       }
     }
 
-    // No on-chain policy — fall back to DB-only delete
-    if (!window.confirm(`Delete agent "${agent.name}"?`)) return;
+    // DB-only delete (fallback for old agents or when no wallet is connected)
+    if (!window.confirm(`Delete agent "${agent.name}" from the database?`)) return;
     setDeletingAgent(true);
     try {
       await api.deleteAgent(agent.id);

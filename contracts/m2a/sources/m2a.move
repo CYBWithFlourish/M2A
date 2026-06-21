@@ -113,6 +113,17 @@ entry fun delete_agent(
     event::emit(AgentFrozen { agent_id: agent_addr });
 }
 
+/// Remove an agent from the registry without requiring the policy object.
+/// Anyone can call this — the registry is a shared object and this merely
+/// exposes the existing `registry::remove_agent` as an entry function.
+entry fun unregister_agent(
+    registry: &mut AgentRegistry,
+    agent_wallet: address,
+    owner: address,
+) {
+    registry.remove_agent(agent_wallet, owner);
+}
+
 public fun emit_policy_updated(agent_id: address, policy_version: u64) {
     event::emit(PolicyUpdated { agent_id, policy_version });
 }
