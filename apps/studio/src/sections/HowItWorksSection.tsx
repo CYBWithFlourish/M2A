@@ -33,9 +33,9 @@ export default function HowItWorksSection() {
     <section id="how-it-works" className="border-b border-border bg-surface-low">
       <div className="mx-auto max-w-[1400px] px-6 py-16 md:py-24">
         <div className="text-center">
-          <h2 className="text-headline-lg">1. Build. 2. Run. 3. Dataset. <span className="text-primary">Persistent memory at every step.</span></h2>
+          <h2 className="text-headline-lg">1. Build. 2. Run. 3. Dataset.</h2>
           <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-            Every node remembers its actions. Every run learns from the last. Three steps from canvas to verifiable data.
+            Persistent memory at every step. Every node remembers its actions. Every run learns from the last.
           </p>
         </div>
 
@@ -59,11 +59,10 @@ export default function HowItWorksSection() {
         <div className="rounded-lg rounded-tl-none border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface">
             <span className="flex gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-danger/60" />
-              <span className="w-2.5 h-2.5 rounded-full bg-warning/60" />
-              <span className="w-2.5 h-2.5 rounded-full bg-success/60" />
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500/60" />
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500/60" />
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500/60" />
             </span>
-            <span className="ml-2 text-mono text-slate-600">buiry.ts</span>
           </div>
           <div className="p-5 overflow-x-auto">
             <pre className="text-mono text-[13px] leading-relaxed text-slate-300">
