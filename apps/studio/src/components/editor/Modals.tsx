@@ -29,125 +29,11 @@ type TemplateDef = {
   canvasConnections?: Connection[];
 };
 
-const BUILTIN_TEMPLATES: TemplateDef[] = [
-  {
-    id: "whale", category: "DeFi", title: "SUI Whale Tracker", nodes: 5,
-    desc: "Real-time monitoring of large-scale SUI movements with automated alert routing to Discord and Telegram.",
-    canvasNodes: [
-      { id: "n_sched", type: "schedule_trigger", x: 80, y: 200, status: "idle" },
-      { id: "n_monitor", type: "balance_monitor", x: 320, y: 200, status: "idle" },
-      { id: "n_cond", type: "conditional", x: 560, y: 140, status: "idle" },
-      { id: "n_discord", type: "discord", x: 800, y: 80, status: "idle" },
-      { id: "n_telegram", type: "telegram_send", x: 800, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_sched", to: "n_monitor" },
-      { id: "c2", from: "n_monitor", to: "n_cond" },
-      { id: "c3", from: "n_cond", to: "n_discord", branch: "true" },
-      { id: "c4", from: "n_cond", to: "n_telegram" },
-    ],
-  },
-  {
-    id: "social", category: "AI", title: "AI Social Media Agent", nodes: 8,
-    desc: "GPT-powered agent that scans mentions, performs sentiment analysis, and generates contextual responses.",
-    canvasNodes: [
-      { id: "n_sched", type: "schedule_trigger", x: 80, y: 200, status: "idle" },
-      { id: "n_rss", type: "rss_reader", x: 320, y: 80, status: "idle" },
-      { id: "n_agent", type: "agent", x: 320, y: 200, status: "idle" },
-      { id: "n_twitter", type: "twitter", x: 320, y: 320, status: "idle" },
-      { id: "n_merge", type: "merge", x: 560, y: 200, status: "idle" },
-      { id: "n_out", type: "output", x: 800, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_sched", to: "n_rss" },
-      { id: "c2", from: "n_sched", to: "n_agent" },
-      { id: "c3", from: "n_sched", to: "n_twitter" },
-      { id: "c4", from: "n_rss", to: "n_merge" },
-      { id: "c5", from: "n_agent", to: "n_merge" },
-      { id: "c6", from: "n_twitter", to: "n_merge" },
-      { id: "c7", from: "n_merge", to: "n_out" },
-    ],
-  },
-  {
-    id: "discord", category: "Trigger", title: "Discord-to-On-Chain Bot", nodes: 4,
-    desc: "Bridge Web2 commands to Web3 actions. Execute secure smart contract calls directly from specialized Discord roles.",
-    canvasNodes: [
-      { id: "n_discord", type: "discord_trigger", x: 80, y: 200, status: "idle" },
-      { id: "n_agent", type: "agent", x: 320, y: 200, status: "idle" },
-      { id: "n_tx", type: "sui", x: 560, y: 200, status: "idle" },
-      { id: "n_out", type: "output", x: 800, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_discord", to: "n_agent" },
-      { id: "c2", from: "n_agent", to: "n_tx" },
-      { id: "c3", from: "n_tx", to: "n_out" },
-    ],
-  },
-  {
-    id: "yield", category: "DeFi", title: "Automated Yield Harvester", nodes: 6,
-    desc: "Automatically claims rewards and reinvests them into high-APY pools based on gas-price thresholds and slippage.",
-    canvasNodes: [
-      { id: "n_sched", type: "schedule_trigger", x: 80, y: 240, status: "idle" },
-      { id: "n_pyth", type: "pyth", x: 320, y: 80, status: "idle" },
-      { id: "n_cond", type: "conditional", x: 320, y: 240, status: "idle" },
-      { id: "n_alphafi", type: "alphafi", x: 560, y: 120, status: "idle" },
-      { id: "n_haedal", type: "haedal", x: 560, y: 280, status: "idle" },
-      { id: "n_out", type: "output", x: 800, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_sched", to: "n_pyth" },
-      { id: "c2", from: "n_pyth", to: "n_cond" },
-      { id: "c3", from: "n_cond", to: "n_alphafi", branch: "true" },
-      { id: "c4", from: "n_cond", to: "n_haedal" },
-      { id: "c5", from: "n_alphafi", to: "n_out" },
-      { id: "c6", from: "n_haedal", to: "n_out" },
-    ],
-  },
-  {
-    id: "rebalance", category: "DeFi", title: "Treasury Auto-Rebalance", nodes: 7,
-    desc: "Maintain target allocation across SUI/USDC pools with safe slippage and oracle-confirmed price feeds.",
-    canvasNodes: [
-      { id: "n_sched", type: "schedule_trigger", x: 80, y: 200, status: "idle" },
-      { id: "n_pyth", type: "pyth", x: 320, y: 80, status: "idle" },
-      { id: "n_balance", type: "balance_monitor", x: 320, y: 200, status: "idle" },
-      { id: "n_cond", type: "conditional", x: 560, y: 200, status: "idle" },
-      { id: "n_swap", type: "aftermath", x: 800, y: 120, status: "idle" },
-      { id: "n_lend", type: "suilend", x: 800, y: 280, status: "idle" },
-      { id: "n_out", type: "output", x: 1040, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_sched", to: "n_pyth" },
-      { id: "c2", from: "n_sched", to: "n_balance" },
-      { id: "c3", from: "n_pyth", to: "n_cond" },
-      { id: "c4", from: "n_balance", to: "n_cond" },
-      { id: "c5", from: "n_cond", to: "n_swap", branch: "true" },
-      { id: "c6", from: "n_cond", to: "n_lend" },
-      { id: "c7", from: "n_swap", to: "n_out" },
-      { id: "c8", from: "n_lend", to: "n_out" },
-    ],
-  },
-  {
-    id: "rss", category: "Web2", title: "RSS → AI Summary → Slack", nodes: 4,
-    desc: "Poll feeds, summarize with an agent, post the digest to Slack.",
-    canvasNodes: [
-      { id: "n_sched", type: "schedule_trigger", x: 80, y: 200, status: "idle" },
-      { id: "n_rss", type: "rss_reader", x: 320, y: 200, status: "idle" },
-      { id: "n_agent", type: "agent", x: 560, y: 200, status: "idle" },
-      { id: "n_slack", type: "slack", x: 800, y: 200, status: "idle" },
-    ],
-    canvasConnections: [
-      { id: "c1", from: "n_sched", to: "n_rss" },
-      { id: "c2", from: "n_rss", to: "n_agent" },
-      { id: "c3", from: "n_agent", to: "n_slack" },
-    ],
-  },
-];
-
 export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { dispatch } = useWorkflow();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("All");
-  const [remoteTemplates, setRemoteTemplates] = useState<TemplateDef[]>([]);
+  const [templates, setTemplates] = useState<TemplateDef[]>([]);
   const [loading, setLoading] = useState(false);
   const cats = ["All", "AI", "DeFi", "Web2", "Trigger"];
 
@@ -169,12 +55,11 @@ export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose:
           canvasConnections: edges.map((e: any) => ({ id: e.id, from: e.source || e.from, to: e.target || e.to, branch: e.sourceHandle || e.branch || undefined })),
         };
       });
-      setRemoteTemplates(mapped);
+      setTemplates(mapped);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [open]);
 
-  const all = remoteTemplates.length > 0 ? remoteTemplates : BUILTIN_TEMPLATES;
-  const filtered = all.filter((t) => (cat === "All" || t.category === cat) && t.title.toLowerCase().includes(q.toLowerCase()));
+  const filtered = templates.filter((t) => (cat === "All" || t.category === cat) && t.title.toLowerCase().includes(q.toLowerCase()));
 
   const useTemplate = (t: TemplateDef) => {
     if (t.canvasNodes && t.canvasConnections) {
@@ -226,7 +111,7 @@ export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose:
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="col-span-full grid place-items-center py-16 text-xs text-muted-foreground">No templates found.</div>
+          <div className="col-span-full grid place-items-center py-16 text-xs text-muted-foreground">No templates available</div>
         ) : filtered.map((t) => (
           <div key={t.id} className="flex flex-col rounded-lg border border-border bg-surface p-5 transition hover:border-primary/40">
             <div className="mb-3 flex items-center justify-between">
@@ -247,9 +132,9 @@ export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose:
 
       <div className="flex items-center justify-between border-t border-border bg-surface-container/50 px-6 py-3 text-[11px] text-muted-foreground">
         <span>
-          <strong className="text-foreground">{all.length} templates</strong>
+          <strong className="text-foreground">{templates.length} templates</strong>
         </span>
-        <span>{remoteTemplates.length > 0 ? "API" : "Built-in"}</span>
+        <span>API</span>
       </div>
     </Shell>
   );
@@ -526,8 +411,12 @@ export function TopUpDialog({ open, onClose }: { open: boolean; onClose: () => v
 export function WalletDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { isConnected, isConnecting, address, authMethod, connectWallet, startZkLogin, disconnect } = useSui();
 
-  const handleConnectWallet = async () => {
-    await connectWallet();
+  const handleConnectWallet = async (walletName?: string) => {
+    if (walletName === "Sui Wallet") {
+      await connectWallet();
+    } else {
+      await connectWallet();
+    }
     onClose();
   };
 
@@ -564,19 +453,24 @@ export function WalletDialog({ open, onClose }: { open: boolean; onClose: () => 
           </>
         ) : (
           <>
-            {["Sui Wallet", "Suiet", "Ethos", "Phantom"].map((w) => (
+            {[
+              { name: "Sui Wallet", key: "sui" },
+              { name: "Suiet", key: "suiet" },
+              { name: "Ethos", key: "ethos" },
+              { name: "Phantom", key: "phantom" },
+            ].map((w) => (
               <button
-                key={w}
-                onClick={w === "Sui Wallet" ? handleConnectWallet : handleConnectWallet}
+                key={w.key}
+                onClick={() => handleConnectWallet(w.name)}
                 disabled={isConnecting}
                 className="flex w-full items-center justify-between rounded-md border border-border bg-surface-container px-4 py-3 text-sm hover:bg-accent disabled:opacity-50"
               >
                 <span className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" /> {w}
+                  <Wallet className="h-4 w-4 text-primary" /> {w.name}
                 </span>
                 {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4 text-muted-foreground" />}
               </button>
-        ))}
+            ))}
 
             <button
               onClick={handleGoogleLogin}

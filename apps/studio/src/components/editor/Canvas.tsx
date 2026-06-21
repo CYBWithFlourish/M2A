@@ -350,7 +350,7 @@ function NodeView({
           {node.status === "success" && <Check className="h-3.5 w-3.5 text-success" />}
           {node.status === "error" && <X className="h-3.5 w-3.5 text-danger" />}
           <button
-            onClick={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               onDelete();
             }}

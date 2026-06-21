@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Activity, ArrowLeft, ArrowUp, Boxes, Cpu, Database, Plus, RefreshCw, Shield, Workflow as WorkflowIcon, Diamond, Loader2 } from "lucide-react";
+import { Activity, ArrowLeft, ArrowUp, Boxes, Cpu, Plus, RefreshCw, Shield, Workflow as WorkflowIcon, Diamond, Loader2, Wifi, WifiOff } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { ErrorBoundary } from "@/lib/error-boundary";
+
+const SUI_NETWORK = (import.meta as any).env?.VITE_NETWORK || "testnet";
+const SUI_RPC = `https://fullnode.${SUI_NETWORK}.sui.io:443`;
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -15,62 +18,121 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
+interface StatData {
+  agents: number;
+  workflows: number;
+  policies: number;
+  interactions: number;
+}
+
+interface HealthItem {
+  name: string;
+  status: "healthy" | "error" | "warn";
+}
+
+interface ActivityItem {
+  title: string;
+  id: string;
+  time: string;
+  status: string;
+  startTime?: number;
+}
+
+interface HistoryItem {
+  label: string;
+  success: number;
+  failed: number;
+  startTime?: number;
+}
+
 function Dashboard() {
   const { theme, toggle } = useTheme();
 
-  const [agents, setAgents] = useState<number>(0);
-  const [workflows, setWorkflows] = useState<number>(0);
-  const [activePolicies, setActivePolicies] = useState<number>(0);
-  const [memoryUsage, setMemoryUsage] = useState<string>("—");
-  const [healthItems, setHealthItems] = useState<Array<{ name: string; value: string }>>([]);
-  const [activities, setActivities] = useState<Array<{ title: string; id: string; time: string; status: string }>>([]);
-  const [history, setHistory] = useState<Array<{ label: string; success: number; failed: number }>>([]);
+  const [stats, setStats] = useState<StatData>({ agents: 0, workflows: 0, policies: 0, interactions: 0 });
+  const [healthItems, setHealthItems] = useState<HealthItem[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.allSettled([
-      api.listAgents().then((a) => setAgents(a.length)),
-      api.listWorkflows().then((w) => setWorkflows(w.length)),
-      api.health(),
-      api.listExecutionHistory(),
-      api.getDatasetStats(),
-    ]).then((results) => {
-      const agentsData = results[0].status === "fulfilled" ? results[0].value : 0;
-      setActivePolicies(agentsData as number);
-
-      const healthData = results[2].status === "fulfilled" ? results[2].value : null;
-      if (healthData) {
-        setHealthItems([
-          { name: "Sui RPC", value: healthData.suiRpc || "Healthy" },
-          { name: "Walrus Node", value: healthData.walrusNode || "Active" },
-          { name: "AI Gateway", value: healthData.aiGateway || "Ready" },
-          { name: "Workflow Engine", value: healthData.engine || "Running" },
+    async function load() {
+      setLoading(true);
+      try {
+        const [agentsR, workflowsR, execHistoryR, dsStatsR, healthR] = await Promise.allSettled([
+          api.listAgents(),
+          api.listWorkflows(),
+          api.listExecutionHistory(),
+          api.getDatasetStats(),
+          api.health(),
         ]);
-      }
 
-      if (results[3].status === "fulfilled") {
-        const histData = results[3].value || [];
-        const successCount = histData.filter((e: any) => e.status === "completed").length;
-        const failCount = histData.filter((e: any) => e.status === "failed").length;
-        setHistory(histData.slice(0, 5).map((e: any) => ({
-          label: e.workflow_name || "Workflow",
+        const agents: any[] = agentsR.status === "fulfilled" ? agentsR.value : [];
+        const workflows: any[] = workflowsR.status === "fulfilled" ? workflowsR.value : [];
+        const execHistory: any[] = execHistoryR.status === "fulfilled" ? execHistoryR.value : [];
+        const dsStats: any = dsStatsR.status === "fulfilled" ? dsStatsR.value : {};
+
+        setStats({
+          agents: agents.length,
+          workflows: Array.isArray(workflows) ? workflows.length : 0,
+          policies: agents.filter((a: any) => a.status === "active").length,
+          interactions: dsStats.totalInteractions || 0,
+        });
+
+        const hist: HistoryItem[] = (execHistory || []).slice(0, 5).map((e: any) => ({
+          label: e.workflow_name || "Workflow execution",
           success: e.status === "completed" ? 1 : 0,
           failed: e.status === "failed" ? 1 : 0,
-        })));
-        setActivities(histData.slice(0, 4).map((e: any) => ({
-          title: e.workflow_name || "Workflow execution",
-          id: e.workflow_id || e.id || "—",
-          time: e.started_at ? new Date(e.started_at).toLocaleTimeString() : "—",
-          status: e.status === "completed" ? "SUCCESS" : e.status === "failed" ? "ERROR" : "RUNNING",
-        })));
-      }
+          startTime: e.started_at ? new Date(e.started_at).getTime() : undefined,
+        }));
+        setHistory(hist);
 
-      if (results[4].status === "fulfilled") {
-        const dsData = results[4].value;
-        setMemoryUsage(dsData?.totalInteractions ? String(dsData.totalInteractions) : "—");
+        const acts: ActivityItem[] = (execHistory || []).slice(0, 4).map((e: any) => {
+          const ts = e.started_at ? new Date(e.started_at) : null;
+          return {
+            title: e.workflow_name || "Workflow execution",
+            id: e.workflow_id || e.id || "—",
+            time: ts ? ts.toLocaleTimeString() : "—",
+            status: e.status === "completed" ? "SUCCESS" : e.status === "failed" ? "ERROR" : "RUNNING",
+            startTime: ts ? ts.getTime() : undefined,
+          };
+        });
+        setActivities(acts);
+
+        const checks: HealthItem[] = [];
+
+        if (healthR.status === "fulfilled" && healthR.value) {
+          const h = healthR.value;
+          checks.push({ name: "Runtime Engine", status: h.status === "ok" ? "healthy" : "error" });
+          checks.push({ name: "API Gateway", status: h.status === "ok" ? "healthy" : "error" });
+        } else {
+          checks.push({ name: "Runtime Engine", status: "error" });
+          checks.push({ name: "API Gateway", status: "error" });
+        }
+
+        try {
+          const res = await fetch(SUI_RPC, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "suix_getLatestSuiSystemState", params: [] }),
+          });
+          const data = await res.json();
+          checks.push({ name: "Sui RPC", status: data.result ? "healthy" : "error" });
+        } catch {
+          checks.push({ name: "Sui RPC", status: "error" });
+        }
+
+        setHealthItems(checks);
+      } catch {} finally {
+        setLoading(false);
       }
-    }).catch(() => {}).finally(() => setLoading(false));
+    }
+    load();
   }, []);
+
+  const formatLogTime = (ts?: number) => {
+    if (!ts) return new Date().toTimeString().slice(0, 8);
+    return new Date(ts).toTimeString().slice(0, 8);
+  };
 
   return (
     <ErrorBoundary>
@@ -138,30 +200,21 @@ function Dashboard() {
           </div>
         ) : (
           <div className="canvas-grid scrollbar-thin flex-1 overflow-y-auto px-6 py-8 lg:px-10">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h1 className="font-display text-3xl font-semibold">Buiry Admin Dashboard</h1>
-                <p className="mt-1 text-sm text-muted-foreground">System-wide performance and orchestration telemetry.</p>
-              </div>
-              <div className="flex items-center gap-1 rounded-md border border-border bg-surface-container p-1 text-xs">
-                {["24 Hours", "7 Days", "30 Days"].map((t, i) => (
-                  <button key={t} className={`rounded px-3 py-1.5 font-semibold uppercase tracking-wider ${i === 0 ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                    {t}
-                  </button>
-                ))}
-              </div>
+            <div className="mb-8">
+              <h1 className="font-display text-3xl font-semibold">Buiry Admin Dashboard</h1>
+              <p className="mt-1 text-sm text-muted-foreground">System-wide performance and orchestration telemetry.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Stat title="Total Agents" value={String(agents)} sub={<span className="inline-flex items-center gap-1 text-success"><ArrowUp className="h-3 w-3" /> Active</span>} accent="var(--primary)" />
-              <Stat title="Total Workflows" value={String(workflows)} sub="On platform" accent="var(--cyan)" />
-              <Stat title="Active Policies" value={String(activePolicies)} sub="Governing" accent="var(--success)" />
-              <Stat title="Memory Usage" value={memoryUsage} sub="Total interactions" accent="var(--warning)" />
+              <Stat title="Total Agents" value={String(stats.agents)} sub={<span className="inline-flex items-center gap-1 text-success"><ArrowUp className="h-3 w-3" /> Active</span>} accent="var(--primary)" />
+              <Stat title="Total Workflows" value={String(stats.workflows)} sub="On platform" accent="var(--cyan)" />
+              <Stat title="Active Policies" value={String(stats.policies)} sub="Governing" accent="var(--success)" />
+              <Stat title="Memory Usage" value={String(stats.interactions)} sub="Total interactions" accent="var(--warning)" />
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
               <div className="space-y-6">
-                <Panel title="Workflow Executions (24h)" right={<Legend />}>
+                <Panel title="Workflow Executions" right={<Legend />}>
                   <ExecutionsChart history={history} />
                 </Panel>
                 <Panel title="Recent Activity" right={<RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}>
@@ -200,12 +253,23 @@ function Dashboard() {
                     ) : (
                       healthItems.map((h) => (
                         <div key={h.name} className="flex items-center justify-between rounded-md border border-border bg-surface-container px-3 py-2 text-sm">
-                          <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-success" />{h.name}</span>
-                          <span className="font-mono text-[11px] text-muted-foreground">{h.value}</span>
+                          <span className="flex items-center gap-2">
+                            <span className={`h-1.5 w-1.5 rounded-full ${h.status === "healthy" ? "bg-success" : h.status === "warn" ? "bg-warning" : "bg-danger"}`} />
+                            {h.name}
+                          </span>
+                          <span className={`font-mono text-[11px] ${h.status === "healthy" ? "text-success" : h.status === "warn" ? "text-warning" : "text-danger"}`}>
+                            {h.status === "healthy" ? "Healthy" : h.status === "warn" ? "Degraded" : "Error"}
+                          </span>
                         </div>
                       ))
                     )}
-                    <button className="mt-2 w-full rounded-md border border-border bg-surface-container py-2 text-xs font-semibold uppercase tracking-wider hover:bg-accent">
+                    <button
+                      className="mt-2 w-full rounded-md border border-border bg-surface-container py-2 text-xs font-semibold uppercase tracking-wider hover:bg-accent"
+                      onClick={() => {
+                        setLoading(true);
+                        setTimeout(() => window.location.reload(), 100);
+                      }}
+                    >
                       Refresh
                     </button>
                   </div>
@@ -213,37 +277,29 @@ function Dashboard() {
 
                 <Panel title="Environment">
                   <div className="space-y-3 text-xs">
-                    <EnvField label="Network" value="Sui Testnet v1.2.0" />
-                    <EnvField label="Walrus Aggregator" value="https://aggregator.walrus-testnet.walrus.space" />
+                    <EnvField label="Network" value={`Sui ${SUI_NETWORK.charAt(0).toUpperCase() + SUI_NETWORK.slice(1)}`} />
+                    <EnvField label="RPC URL" value={SUI_RPC} />
                     <EnvField label="API Base" value="/api/v1" />
                   </div>
                 </Panel>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Link to="/" className="flex flex-col items-center gap-1 rounded-lg bg-primary py-4 text-primary-foreground hover:opacity-90">
-                    <Plus className="h-5 w-5" />
-                    <span className="text-xs font-semibold uppercase tracking-wider">New Node</span>
-                  </Link>
-                  <button className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface-container py-4 hover:bg-accent">
-                    <RefreshCw className="h-5 w-5" />
-                    <span className="text-xs font-semibold uppercase tracking-wider">Reboot</span>
-                  </button>
-                </div>
               </div>
             </div>
 
             <div className="mt-6 rounded-xl border border-border bg-card">
               <div className="flex items-center gap-4 border-b border-border px-4 py-2 text-xs">
                 <span className="font-semibold text-primary">TERMINAL</span>
-                <span className="text-muted-foreground">DEBUG</span>
+                <span className="text-muted-foreground">EXECUTION LOG</span>
               </div>
               <pre className="scrollbar-thin overflow-x-auto px-4 py-3 font-mono text-[12px] leading-relaxed">
-                {history.map((h, i) => (
-                  <span key={i} className={h.success ? "text-success" : "text-danger"}>
-                    [{new Date().toTimeString().slice(0, 8)}] {h.label}: {h.success ? "success" : "failed"}{"\n"}
-                  </span>
-                ))}
-                {history.length === 0 && <span className="text-muted-foreground">No execution data available.</span>}
+                {history.length === 0 ? (
+                  <span className="text-muted-foreground">No execution data available.</span>
+                ) : (
+                  history.map((h, i) => (
+                    <span key={i} className={h.success ? "text-success" : "text-danger"}>
+                      [{formatLogTime(h.startTime)}] {h.label}: {h.success ? "success" : "failed"}{"\n"}
+                    </span>
+                  ))
+                )}
               </pre>
             </div>
           </div>
@@ -298,21 +354,31 @@ function Legend() {
 
 function ExecutionsChart({ history }: { history: Array<{ label: string; success: number; failed: number }> }) {
   const total = history.reduce((s, h) => s + h.success + h.failed, 0);
-  const successPct = total > 0 ? (history.reduce((s, h) => s + h.success, 0) / total) * 100 : 50;
-  const failPct = total > 0 ? (history.reduce((s, h) => s + h.failed, 0) / total) * 100 : 0;
+  if (total === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center">
+        <span className="text-xs text-muted-foreground">Chart data incoming</span>
+      </div>
+    );
+  }
+  const successPct = (history.reduce((s, h) => s + h.success, 0) / total) * 100;
+  const failPct = (history.reduce((s, h) => s + h.failed, 0) / total) * 100;
   return (
     <svg viewBox="0 0 600 200" className="h-56 w-full">
-      {history.length > 0 ? (
-        <>
-          <path d={`M0,${200 - successPct * 1.5} C100,${180 - successPct * 1.2} 200,${160 - successPct} 400,${140 - successPct * 0.8} C500,${130 - successPct * 0.5} 550,${150 - successPct * 0.6} 600,${160 - successPct * 0.7}`} fill="none" stroke="var(--primary)" strokeWidth={2.5} />
-          <path d={`M0,${180 - failPct} C100,${160 - failPct} 200,${170 - failPct} 400,${160 - failPct} C500,${155 - failPct} 550,${165 - failPct} 600,${170 - failPct}`} fill="none" stroke="var(--danger)" strokeWidth={2} strokeDasharray="6 4" opacity={0.6} />
-        </>
-      ) : (
-        <>
-          <path d="M0,140 C80,110 120,170 200,150 S320,80 400,60 S560,150 600,130" fill="none" stroke="var(--primary)" strokeWidth={2.5} />
-          <path d="M0,160 C80,150 120,180 200,170 S320,140 400,150 S560,180 600,170" fill="none" stroke="var(--danger)" strokeWidth={2} strokeDasharray="6 4" opacity={0.6} />
-        </>
-      )}
+      <path
+        d={`M0,${200 - successPct * 1.5} C100,${180 - successPct * 1.2} 200,${160 - successPct} 400,${140 - successPct * 0.8} C500,${130 - successPct * 0.5} 550,${150 - successPct * 0.6} 600,${160 - successPct * 0.7}`}
+        fill="none"
+        stroke="var(--primary)"
+        strokeWidth={2.5}
+      />
+      <path
+        d={`M0,${180 - failPct} C100,${160 - failPct} 200,${170 - failPct} 400,${160 - failPct} C500,${155 - failPct} 550,${165 - failPct} 600,${170 - failPct}`}
+        fill="none"
+        stroke="var(--danger)"
+        strokeWidth={2}
+        strokeDasharray="6 4"
+        opacity={0.6}
+      />
     </svg>
   );
 }

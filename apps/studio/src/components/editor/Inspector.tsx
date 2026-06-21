@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings2 } from "lucide-react";
+import { Settings2, PanelRightOpen, PanelLeftClose } from "lucide-react";
 import { getNodeDef, type ConfigField } from "@/lib/nodes";
 import { useWorkflow } from "@/lib/workflow-context";
 import { ErrorBoundary } from "@/lib/error-boundary";
@@ -17,15 +17,20 @@ import {
 export function Inspector() {
   const { selectedId, nodes, dispatch } = useWorkflow();
   const node = nodes.find((n) => n.id === selectedId);
+  const [collapsed, setCollapsed] = useState(false);
 
   if (!node) {
     return (
       <ErrorBoundary>
-      <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-surface lg:flex">
-        <Header subtitle="No selection" />
-        <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
-          Select a node on the canvas to view its inspector.
-        </div>
+      <aside className={`hidden shrink-0 flex-col border-l border-border bg-surface lg:flex transition-all ${collapsed ? 'w-12' : 'w-80'}`}>
+        {collapsed ? <CollapsedBar onExpand={() => setCollapsed(false)} /> : (
+          <>
+            <Header subtitle="No selection" onCollapse={() => setCollapsed(true)} />
+            <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
+              Select a node on the canvas to view its inspector.
+            </div>
+          </>
+        )}
       </aside>
       </ErrorBoundary>
     );
@@ -35,11 +40,15 @@ export function Inspector() {
   if (!def) {
     return (
       <ErrorBoundary>
-      <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-surface lg:flex">
-        <Header subtitle="Unknown" />
-        <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
-          Unknown node type.
-        </div>
+      <aside className={`hidden shrink-0 flex-col border-l border-border bg-surface lg:flex transition-all ${collapsed ? 'w-12' : 'w-80'}`}>
+        {collapsed ? <CollapsedBar onExpand={() => setCollapsed(false)} /> : (
+          <>
+            <Header subtitle="Unknown" onCollapse={() => setCollapsed(true)} />
+            <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
+              Unknown node type.
+            </div>
+          </>
+        )}
       </aside>
       </ErrorBoundary>
     );
@@ -48,13 +57,17 @@ export function Inspector() {
   if (def.fields && def.fields.length > 0) {
     return (
       <ErrorBoundary>
-      <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-surface lg:flex">
-        <Header subtitle={def.label} />
-        <ConfigForm
-          fields={def.fields}
-          node={node}
-          onApply={(data) => dispatch({ type: "update_node_config", id: node.id, config: data })}
-        />
+      <aside className={`hidden shrink-0 flex-col border-l border-border bg-surface lg:flex transition-all ${collapsed ? 'w-12' : 'w-80'}`}>
+        {collapsed ? <CollapsedBar onExpand={() => setCollapsed(false)} /> : (
+          <>
+            <Header subtitle={def.label} onCollapse={() => setCollapsed(true)} />
+            <ConfigForm
+              fields={def.fields}
+              node={node}
+              onApply={(data) => dispatch({ type: "update_node_config", id: node.id, config: data })}
+            />
+          </>
+        )}
       </aside>
       </ErrorBoundary>
     );
@@ -62,17 +75,21 @@ export function Inspector() {
 
   return (
     <ErrorBoundary>
-    <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-surface lg:flex">
-      <Header subtitle={def.label} />
-      <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
-        No configuration for this node type.
-      </div>
+    <aside className={`hidden shrink-0 flex-col border-l border-border bg-surface lg:flex transition-all ${collapsed ? 'w-12' : 'w-80'}`}>
+      {collapsed ? <CollapsedBar onExpand={() => setCollapsed(false)} /> : (
+        <>
+          <Header subtitle={def.label} onCollapse={() => setCollapsed(true)} />
+          <div className="grid flex-1 place-items-center px-6 text-center text-xs text-muted-foreground">
+            No configuration for this node type.
+          </div>
+        </>
+      )}
     </aside>
     </ErrorBoundary>
   );
 }
 
-function Header({ subtitle }: { subtitle: string }) {
+function Header({ subtitle, onCollapse }: { subtitle: string; onCollapse: () => void }) {
   return (
     <div className="flex items-center gap-2 border-b border-border px-4 py-3">
       <Settings2 className="h-4 w-4 text-primary" />
@@ -80,6 +97,27 @@ function Header({ subtitle }: { subtitle: string }) {
       <span className="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
         {subtitle}
       </span>
+      <button
+        onClick={onCollapse}
+        className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
+        title="Collapse inspector"
+      >
+        <PanelRightOpen className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function CollapsedBar({ onExpand }: { onExpand: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-3 p-2">
+      <button
+        onClick={onExpand}
+        className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
+        title="Expand inspector"
+      >
+        <PanelLeftClose className="h-4 w-4" />
+      </button>
     </div>
   );
 }

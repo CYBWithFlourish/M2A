@@ -172,6 +172,14 @@ export const api = {
     return res.json();
   },
 
+  async searchMemory(poolName: string): Promise<any> {
+    const res = await fetch(`${BASE}/memory/pool/${encodeURIComponent(poolName)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return res.json();
+  },
+
   async health(): Promise<any> {
     const res = await fetch('/health');
     return res.json();
