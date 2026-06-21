@@ -37,7 +37,7 @@ const BASE = '/api/v1';
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const walletAddr = localStorage.getItem('wallet_address');
+  const walletAddr = typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null;
   if (walletAddr) {
     headers['x-user-address'] = walletAddr;
   }

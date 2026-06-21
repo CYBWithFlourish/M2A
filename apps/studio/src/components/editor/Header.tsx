@@ -64,7 +64,7 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
         <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/15 text-primary">
           <span className="text-sm font-bold">M</span>
         </div>
-        <span className="font-display text-base font-semibold tracking-tight">M2A Studio</span>
+        <img src="/M2ALightLogo.png" alt="M2A" className="h-7 w-auto" />
       </div>
 
       <span className="mx-2 h-5 w-px bg-border" />
