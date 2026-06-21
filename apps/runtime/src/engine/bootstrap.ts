@@ -22,7 +22,7 @@ import { suiTxService } from './services/sui/SuiTxService.js';
 import { suiQueryService } from './services/sui/SuiQueryService.js';
 import { deepBookService } from './services/defi/DeepBookService.js';
 import { cetusService } from './services/defi/CetusService.js';
-import { walrusService } from './services/walrus/WalrusService.js';
+
 
 import { integrationRegistry } from './integrations/IntegrationRegistry.js';
 import { registerAllSkillsAsTools } from './tools/SkillTools.js';
@@ -59,7 +59,7 @@ export function bootstrapEngine() {
   serviceRegistry.register(suiQueryService);
   serviceRegistry.register(deepBookService);
   serviceRegistry.register(cetusService);
-  serviceRegistry.register(walrusService);
+
   console.log(`✅ Registered ${serviceRegistry.getAll().length} services`);
 
   // Integrations are created per-config (factory pattern)

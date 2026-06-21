@@ -1,7 +1,7 @@
 import { WorkflowDefinition, WorkflowNode } from '@m2a/sdk';
 import { AgentRunner } from './AgentRunner.js';
 import { nodeHandlers } from './NodeHandlers.js';
-import { UserContext } from '@m2a/client';
+import type { UserContext } from './MemoryRouter.js';
 import { coordinator } from './AgentCoordinator.js';
 import { dpa } from './DataProcessingAgent.js';
 import { db } from '../db.js';

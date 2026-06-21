@@ -1,11 +1,11 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { createSuiClient, suiNetwork } from '../config.js';
-import { resolve } from '@m2a/client';
+import { resolveNetworkVar } from '../config.js';
 
 const M2A_MODULE = 'm2a';
 
 export function getM2APackageId(): string {
-  return resolve('M2A_PACKAGE_ID') || '0x0';
+  return resolveNetworkVar('M2A_PACKAGE_ID') || '0x0';
 }
 
 export function getSuiNetwork(): string {

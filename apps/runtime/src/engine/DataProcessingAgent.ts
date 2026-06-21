@@ -223,24 +223,29 @@ export class DataProcessingAgent {
   }
 
   async storeDataset(dataset: VerifiedDataset): Promise<string> {
-    const content = dataset.format === 'csv'
-      ? this.toCSV(dataset)
-      : JSON.stringify(dataset, null, 2);
-
+    const content = dataset.format === 'csv' ? this.toCSV(dataset) : JSON.stringify(dataset, null, 2);
     try {
-      const { storeToWalrus } = await import('./tools/WalrusTools.js');
-      const result = await storeToWalrus.execute(
-        { content, contentType: 'application/json' },
-        { userId: 'platform', runId: undefined, accountId: 'platform', delegateKey: '' } as any
-      );
-
-      const blobId = typeof result === 'object' ? (result as any).blobId || JSON.stringify(result) : String(result);
+      const sidecarUrl = process.env.WALRUS_SIDECAR_URL || 'http://localhost:9000';
+      const res = await fetch(`${sidecarUrl}/walrus/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: Buffer.from(content).toString('base64'),
+          keyIndex: 0,
+          namespace: 'dpa_dataset',
+          epochs: 50,
+          deferTransfer: false,
+        }),
+      });
+      if (!res.ok) throw new Error(`Sidecar upload failed: ${res.status}`);
+      const data = await res.json();
+      const blobId = data.blobId || data.blob_id || data.id || JSON.stringify(data);
       dataset.walrusBlobId = blobId;
       return blobId;
-    } catch {
+    } catch (err: any) {
       const stubId = `walrus_blob_${Date.now()}`;
       dataset.walrusBlobId = stubId;
-      console.log(`[DPA] Dataset ${dataset.id} stored (stub): ${stubId}`);
+      console.log(`[DPA] Dataset ${dataset.id} stored (stub — sidecar unavailable): ${stubId}`);
       return stubId;
     }
   }

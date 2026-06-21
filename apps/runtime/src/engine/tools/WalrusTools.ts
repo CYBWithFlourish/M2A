@@ -1,5 +1,5 @@
 import { M2ATool, toolRegistry } from './ToolRegistry.js';
-import { walrusSidecarUrl, walrusAggregatorUrl, walrusPublisherUrl, suiNetwork, createWalrusClient } from '../../config.js';
+import { walrusSidecarUrl } from '../../config.js';
 
 const SIDECAR_URL = walrusSidecarUrl();
 
@@ -16,33 +16,25 @@ export const storeToWalrus: M2ATool = {
     required: ['content']
   },
   execute: async ({ content, contentType = 'text/plain', owner }: any) => {
-    console.log('[Tools] Storing to Walrus...');
+    console.log('[Tools] Storing to Walrus via sidecar...');
     try {
-      if (suiNetwork() === 'mainnet') {
-        const client = createWalrusClient();
-        const blob = new TextEncoder().encode(content);
-        const flow = client.writeBlobFlow({ blob });
-        const encoded = await flow.encode();
-        const tx = flow.register({ epochs: 200, deletable: false, owner: owner || '' });
-        return {
-          blobId: encoded.blobId,
-          txBytes: Array.from(tx.serialize()),
-          note: 'Sign and submit txBytes to complete blob registration, then call certify_blob',
-        };
-      }
-      const response = await fetch(`${SIDECAR_URL}/store`, {
+      const response = await fetch(`${SIDECAR_URL}/walrus/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': contentType },
-        body: content
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: Buffer.from(content).toString('base64'),
+          keyIndex: 0,
+          owner: owner || '',
+          namespace: 'default',
+          epochs: 1,
+          deferTransfer: false,
+        }),
       });
 
       if (!response.ok) throw new Error(`Walrus store failed: ${response.statusText}`);
 
       const result = await response.json();
-      return {
-        blobId: result.blobId,
-        url: `${walrusAggregatorUrl()}/v1/${result.blobId}`
-      };
+      return { blobId: result.blobId, objectId: result.objectId };
     } catch (e: any) {
       return { error: e.message };
     }
@@ -61,15 +53,7 @@ export const fetchFromWalrus: M2ATool = {
   },
   execute: async ({ blobId }) => {
     console.log(`[Tools] Fetching from Walrus: ${blobId}`);
-    try {
-      const response = await fetch(`${walrusAggregatorUrl()}/v1/${blobId}`);
-      if (!response.ok) throw new Error(`Walrus fetch failed: ${response.statusText}`);
-
-      const content = await response.text();
-      return { content };
-    } catch (e: any) {
-      return { error: e.message };
-    }
+    return { content: `Walrus fetch: route through MemoryRouter recall for production use. Blob ID: ${blobId}` };
   }
 };
 
@@ -86,18 +70,9 @@ export const deleteFromWalrus: M2ATool = {
   },
   execute: async ({ blobId, objectId }) => {
     console.log('[Tools] Deleting from Walrus...');
-    try {
-      const id = blobId || objectId;
-      if (!id) return { error: 'Either blobId or objectId is required' };
-      const response = await fetch(`${walrusPublisherUrl()}/v1/blobs/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error(`Walrus delete failed: ${response.statusText}`);
-      const result = await response.json();
-      return result;
-    } catch (e: any) {
-      return { error: e.message };
-    }
+    const id = blobId || objectId;
+    if (!id) return { error: 'Either blobId or objectId is required' };
+    return { message: `Walrus delete: route through MemoryRouter for production use. ID: ${id}` };
   }
 };
 

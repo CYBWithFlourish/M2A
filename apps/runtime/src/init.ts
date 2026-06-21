@@ -1,5 +1,4 @@
-import { createPoolClient, resolve, currentNetwork } from '@m2a/client';
-import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { memoryRouter, platformAccountId, platformDelegateKey } from './engine/components.js';
 import { db } from './db.js';
 
 const REQUIRED_POOLS = ['pool::code-review', 'pool::research', 'pool::trading'];
@@ -111,9 +110,6 @@ const BUILTIN_TEMPLATES = [
 ];
 
 export async function initializePlatform(): Promise<void> {
-  const secretKey = process.env.SERVER_SUI_PRIVATE_KEY;
-  const relayerUrl = process.env.MEMWAL_RELAYER_URL || 'http://localhost:8000';
-
   for (const tmpl of BUILTIN_TEMPLATES) {
     try {
       await db.saveTemplate(tmpl);
@@ -123,32 +119,26 @@ export async function initializePlatform(): Promise<void> {
   }
   console.log(`[init] ${BUILTIN_TEMPLATES.length} templates seeded`);
 
-  if (!secretKey) {
+  if (!platformDelegateKey) {
     console.warn('[init] SERVER_SUI_PRIVATE_KEY not set, skipping platform init');
     return;
   }
 
-  const accountId = resolve('MEMWAL_PLATFORM_ACCOUNT_ID');
-  if (!accountId) {
+  if (!platformAccountId) {
     console.warn('[init] MEMWAL_PLATFORM_ACCOUNT_ID not found, skipping platform init');
     return;
   }
 
-  const decodedKey = decodeSuiPrivateKey(secretKey);
-
-  const client = createPoolClient({
-    relayerUrl,
-    platformDelegateKey: decodedKey.secretKey,
-    platformAccountId: accountId,
-  });
-
-  const network = currentNetwork();
-  console.log(`[init] Initializing shared pool namespaces (${network})...`);
+  console.log('[init] Initializing shared pool namespaces...');
 
   let initialized = 0;
   for (const pool of REQUIRED_POOLS) {
     try {
-      await client.remember(`System initialized: Shared pool [${pool}] is now active.`, pool);
+      await memoryRouter.saveArtifacts(
+        { read: [], write: [pool] },
+        `System initialized: Shared pool [${pool}] is now active.`,
+        { accountId: platformAccountId, delegateKey: platformDelegateKey } as any
+      );
       initialized++;
     } catch (e: any) {
       console.warn(`[init] Could not initialize [${pool}]: ${e.message}`);

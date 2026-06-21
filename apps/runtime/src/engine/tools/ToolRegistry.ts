@@ -1,4 +1,4 @@
-import { UserContext } from '@m2a/client';
+import type { UserContext } from '../MemoryRouter.js';
 
 export interface M2ATool {
   name: string;

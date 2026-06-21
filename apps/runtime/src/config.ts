@@ -1,10 +1,5 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import type { SuiClientTypes } from '@mysten/sui/client';
-import {
-  WalrusClient,
-  MAINNET_WALRUS_PACKAGE_CONFIG as WALRUS_PACKAGE_CONFIG_mainnet,
-  TESTNET_WALRUS_PACKAGE_CONFIG as WALRUS_PACKAGE_CONFIG_testnet,
-} from '@mysten/walrus';
 
 export function suiNetwork(): string {
   return process.env.SUI_NETWORK || 'testnet';
@@ -25,19 +20,6 @@ export function createSuiClient(): SuiGrpcClient {
   });
 }
 
-function walrusPackageConfig() {
-  const net = suiNetwork() as 'mainnet' | 'testnet';
-  return net === 'mainnet' ? WALRUS_PACKAGE_CONFIG_mainnet : WALRUS_PACKAGE_CONFIG_testnet;
-}
-
-export function createWalrusClient(): WalrusClient {
-  return new WalrusClient({
-    suiClient: createSuiClient(),
-    network: suiNetwork() as 'mainnet' | 'testnet',
-    packageConfig: walrusPackageConfig(),
-  });
-}
-
 export function cetusIntegratePackage(): string {
   return resolveNetworkVar('CETUS_INTEGRATE_PACKAGE') || '0x19dd42e05fa6c9988a60d30686ee3feb776672b5547e328d6dab16563da65293';
 }
@@ -52,14 +34,6 @@ export function cetusPackageId(): string {
 
 export function deepBookPackageId(): string {
   return resolveNetworkVar('DEEPBOOK_PACKAGE_ID') || '0xdee9';
-}
-
-export function walrusPublisherUrl(): string {
-  return resolveNetworkVar('WALRUS_PUBLISHER_URL') || 'https://publisher.walrus-testnet.walrus.space';
-}
-
-export function walrusAggregatorUrl(): string {
-  return resolveNetworkVar('WALRUS_AGGREGATOR_URL') || 'https://aggregator.walrus-testnet.walrus.site';
 }
 
 export function walrusSidecarUrl(): string {

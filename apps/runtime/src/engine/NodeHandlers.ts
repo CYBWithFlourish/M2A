@@ -1,5 +1,6 @@
 import { WorkflowNode } from '@m2a/sdk';
-import { storeToWalrus, fetchFromWalrus } from './tools/WalrusTools.js';
+
+
 import { suiQuery } from './tools/SuiTools.js';
 import { aftermathService } from './services/defi/AftermathService.js';
 import { naviService } from './services/defi/NaviService.js';
@@ -58,13 +59,29 @@ export class WalrusNodeHandler implements NodeHandler {
 
     if (action === 'fetch') {
       const blobId = (data?.blobId as string) || inputs[0] || '';
-      const result = await fetchFromWalrus.execute({ blobId }, context);
-      return { output: typeof result === 'string' ? result : JSON.stringify(result) };
+      return { output: `Walrus fetch: route through MemoryRouter recall for production use. Blob ID: ${blobId}` };
     }
 
     const content = inputs.join('\n') || (data?.content as string) || '';
-    const result = await storeToWalrus.execute({ content }, context);
-    return { output: typeof result === 'string' ? result : JSON.stringify(result) };
+    const sidecarUrl = process.env.WALRUS_SIDECAR_URL || 'http://localhost:9000';
+    try {
+      const res = await fetch(`${sidecarUrl}/walrus/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: Buffer.from(content).toString('base64'),
+          keyIndex: 0,
+          namespace: 'walrus_node',
+          epochs: 1,
+          deferTransfer: false,
+        }),
+      });
+      if (!res.ok) throw new Error(`Sidecar upload failed: ${res.status}`);
+      const result = await res.json();
+      return { output: JSON.stringify(result) };
+    } catch (err: any) {
+      return { output: `Walrus store stub — sidecar unavailable: ${err.message}` };
+    }
   }
 }
 
@@ -244,32 +261,40 @@ export class FileNodeHandler implements NodeHandler {
     const content = inputs[0] || '';
     const blobId = (data?.blobId as string) || inputs[1] || '';
 
-    try {
-      if (action === 'store') {
-        const result = await storeToWalrus.execute({ content, contentType: 'application/json' }, context);
+    if (action === 'store') {
+      const sidecarUrl = process.env.WALRUS_SIDECAR_URL || 'http://localhost:9000';
+      try {
+        const res = await fetch(`${sidecarUrl}/walrus/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: Buffer.from(content).toString('base64'),
+            keyIndex: 0,
+            namespace: 'file_node',
+            epochs: 1,
+            deferTransfer: false,
+          }),
+        });
+        if (!res.ok) throw new Error(`Sidecar upload failed: ${res.status}`);
+        const result = await res.json();
         return {
-          output: `Stored to Walrus. Blob ID: ${JSON.stringify(result)}`,
-          metadata: { blobId: typeof result === 'object' ? (result as any).blobId : result },
+          output: `Stored to Walrus. Blob ID: ${result.blobId}`,
+          metadata: { blobId: result.blobId },
         };
-      } else if (action === 'fetch') {
-        if (!blobId) {
-          return { output: 'Error: No blob ID provided for fetch' };
-        }
-        const result = await fetchFromWalrus.execute({ blobId }, context);
-        return {
-          output: typeof result === 'string' ? result : JSON.stringify(result),
-          metadata: { blobId },
-        };
-      }
-
-      return { output: `Unknown file action: ${action}` };
-    } catch (err: any) {
-      if (action === 'store') {
+      } catch {
         const fakeId = `blob_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         return { output: `[Stub] Stored. ID: ${fakeId}`, metadata: { blobId: fakeId } };
       }
-      return { output: `[Stub] File ${action} — Walrus unavailable: ${err.message}` };
     }
+
+    if (action === 'fetch') {
+      if (!blobId) {
+        return { output: 'Error: No blob ID provided for fetch' };
+      }
+      return { output: `Walrus fetch: route through MemoryRouter recall for production use. Blob ID: ${blobId}`, metadata: { blobId } };
+    }
+
+    return { output: `Unknown file action: ${action}` };
   }
 }
 

@@ -1,4 +1,4 @@
-import { createPoolClient, createUserClient, MemoryRouter, ns, UserContext } from '@m2a/client';
+import { createPoolClient, createUserClient, MemoryRouter as CoreMemoryRouter, ns, UserContext } from '@m2a/client';
 import type { RecallMemory } from '@m2a/sdk';
 
 export interface BuiryConfig {
@@ -8,6 +8,7 @@ export interface BuiryConfig {
   platformAccountId?: string;
   delegateKey?: string;
   accountId?: string;
+  memoryRouter?: CoreMemoryRouter;
 }
 
 export interface RememberOptions {
@@ -26,7 +27,7 @@ export class Buiry {
   private config: BuiryConfig;
   private poolClient?: any;
   private userClient?: any;
-  private router?: MemoryRouter;
+  private router?: CoreMemoryRouter;
   private initialized = false;
 
   constructor(config: BuiryConfig) {
@@ -39,23 +40,27 @@ export class Buiry {
   async init(context?: { delegateKey: string; accountId: string }): Promise<void> {
     if (this.initialized) return;
 
-    if (this.config.platformAccountId && this.config.delegateKey) {
-      this.poolClient = createPoolClient({
-        relayerUrl: this.config.relayerUrl!,
-        platformAccountId: this.config.platformAccountId,
-        platformDelegateKey: this.config.delegateKey,
-      });
-    }
-
-    this.router = new MemoryRouter(
-      this.poolClient,
-      (dk: string, aid: string) =>
-        createUserClient({
+    if (this.config.memoryRouter) {
+      this.router = this.config.memoryRouter;
+    } else {
+      if (this.config.platformAccountId && this.config.delegateKey) {
+        this.poolClient = createPoolClient({
           relayerUrl: this.config.relayerUrl!,
-          userDelegateKey: dk,
-          userAccountId: aid,
-        })
-    );
+          platformAccountId: this.config.platformAccountId,
+          platformDelegateKey: this.config.delegateKey,
+        });
+      }
+
+      this.router = new CoreMemoryRouter(
+        this.poolClient,
+        (dk: string, aid: string) =>
+          createUserClient({
+            relayerUrl: this.config.relayerUrl!,
+            userDelegateKey: dk,
+            userAccountId: aid,
+          })
+      );
+    }
 
     if (context) {
       this.userClient = createUserClient({
@@ -69,20 +74,25 @@ export class Buiry {
   }
 
   async remember(text: string, options?: RememberOptions): Promise<void> {
-    if (!this.initialized) throw new Error('Buiry not initialized. Call init() first.');
+    if (!this.initialized || !this.router) throw new Error('Buiry not initialized. Call init() first.');
 
     const namespace = options?.namespace || ns.private(
       this.config.workspaceId,
       `agent::${this.config.agentId}`
     );
 
-    if (namespace.startsWith('pool::') && this.poolClient) {
-      await this.poolClient.remember(text, namespace);
-    } else if (this.userClient) {
-      await this.userClient.remember(text, namespace);
-    } else {
-      throw new Error('No client available for write. Ensure init() was called with user context.');
-    }
+    const pseudoNode = {
+      type: 'agent' as const,
+      memory_tier: { read: [], write: [namespace] },
+    };
+
+    const userContext: any = {
+      userId: this.config.workspaceId,
+      delegateKey: this.config.delegateKey || '',
+      accountId: this.config.accountId || '',
+    };
+
+    await this.router.rememberFromNode(pseudoNode as any, text, userContext);
   }
 
   async recall(query: string, options?: RecallOptions): Promise<RecallMemory[]> {
@@ -118,6 +128,6 @@ export class Buiry {
   }
 }
 
-export { MemoryRouter, ns, createPoolClient, createUserClient };
+export { CoreMemoryRouter as MemoryRouter, ns, createPoolClient, createUserClient };
 export type { UserContext, RecallMemory };
 export { BuiryMemory, type BuiryMemoryConfig } from './langchain.js';

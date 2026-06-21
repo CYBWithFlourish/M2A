@@ -1,7 +1,7 @@
 import { AgentWorkflowNode } from '@m2a/sdk';
 import { providers } from './providers/ProviderRegistry.js';
 import { MemoryRouter } from './MemoryRouter.js';
-import { UserContext } from '@m2a/client';
+import type { UserContext } from './MemoryRouter.js';
 import { toolRegistry } from './tools/index.js';
 import { authorizeM2AAction } from '../m2a/authz.js';
 import { dpa } from './DataProcessingAgent.js';
