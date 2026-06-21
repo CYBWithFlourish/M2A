@@ -71,17 +71,6 @@ export default function HowItWorksSection() {
             </pre>
           </div>
         </div>
-
-        <div className="mt-10 text-center">
-          <a
-            href="http://152.67.149.134:5177"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-semibold text-white transition-all hover:brightness-110 active:opacity-80"
-          >
-            Start Building
-          </a>
-        </div>
       </div>
     </section>
   );
