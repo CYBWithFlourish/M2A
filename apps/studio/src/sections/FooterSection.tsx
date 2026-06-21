@@ -80,7 +80,7 @@ export default function FooterSection() {
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={theme === 'dark' ? '/M2ADarkLogo.png' : '/M2ALightLogo.png'} alt="M2A" className="h-6 w-auto" />
+            <img src={theme === 'dark' ? '/M2ADarkLogo.png' : '/M2ALightLogo.png'} alt="M2A" className="h-[60px] w-auto" />
             <p className="text-xs text-slate-600">
               &copy; 2026 M2A. Built on Sui. Stored on Walrus. GPL v3.
             </p>

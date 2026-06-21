@@ -122,7 +122,7 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
       <div className="flex items-center gap-2">
         <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/15 text-primary">
-          <img src="/M2ALightLogo.png" alt="M2A" className="h-14 w-auto" />
+          <img src="/M2ALightLogo.png" alt="M2A" className="h-[140px] w-auto" />
         </div>
       </div>
 
