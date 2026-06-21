@@ -1,27 +1,36 @@
 import { useState } from 'react';
 
 const TABS = [
-  { id: 'setup', label: '1. Build', code: `// Drag 48 node types onto a visual canvas
-// Connect nodes to define your automation
-// Configure each node: inputs, transforms, LLM calls
-
-No orchestration code required.
-Just nodes and edges.` },
-  { id: 'remember', label: '2. Run', code: `// Execute the workflow
-// SSE streaming: watch every step in real-time
-// Parallel agent dispatch across node branches
-// Every node writes to shared memory via Walrus
-// Memory persists across runs, agents, and sessions
-
-Run complete. Output generated.
-Automatically creating dataset...` },
-  { id: 'recall', label: '3. Dataset', code: `// Every run produces a verifiable dataset
-// PII auto-redacted. Privacy score calculated.
-// Published to Walrus as a blob with Sui proof
-
-Dataset verified. Privacy score: 100
-Blob ID: walrus://3BxGhz...f8Kp
-Sui tx: 0xabc123...def456` },
+  { id: 'setup', label: '1. Build', code: (
+    <span>
+      <span className="text-slate-500">// Drag</span> <span className="text-primary">48 node types</span> <span className="text-slate-500">onto a visual canvas</span>{'\n'}
+      <span className="text-slate-500">// Connect nodes to define your</span> <span className="text-primary">automation</span>{'\n'}
+      <span className="text-slate-500">// Configure each node: inputs, transforms, LLM calls</span>{'\n\n'}
+      <span className="text-slate-400">No orchestration code required.</span>{'\n'}
+      <span className="text-slate-400">Just nodes and edges.</span>
+    </span>
+  ) },
+  { id: 'remember', label: '2. Run', code: (
+    <span>
+      <span className="text-slate-500">//</span> <span className="text-primary">Execute</span> <span className="text-slate-500">the workflow</span>{'\n'}
+      <span className="text-slate-500">// SSE streaming: watch every step in real-time</span>{'\n'}
+      <span className="text-slate-500">// Parallel agent dispatch across node branches</span>{'\n'}
+      <span className="text-slate-500">// Every node writes to shared</span> <span className="text-primary">memory via Walrus</span>{'\n'}
+      <span className="text-slate-500">// Memory</span> <span className="text-primary">persists</span> <span className="text-slate-500">across runs, agents, and sessions</span>{'\n\n'}
+      <span className="text-primary">Run complete.</span> <span className="text-slate-400">Output generated.</span>{'\n'}
+      <span className="text-slate-400">Automatically creating dataset...</span>
+    </span>
+  ) },
+  { id: 'recall', label: '3. Dataset', code: (
+    <span>
+      <span className="text-slate-500">// Every run produces a</span> <span className="text-primary">verifiable dataset</span>{'\n'}
+      <span className="text-slate-500">//</span> <span className="text-primary">PII</span> <span className="text-slate-500">auto-redacted.</span> <span className="text-primary">Privacy score</span> <span className="text-slate-500">calculated.</span>{'\n'}
+      <span className="text-slate-500">// Published to</span> <span className="text-primary">Walrus</span> <span className="text-slate-500">as a blob with</span> <span className="text-primary">Sui proof</span>{'\n\n'}
+      <span className="text-primary">Dataset verified.</span> <span className="text-slate-400">Privacy score: 100</span>{'\n'}
+      <span className="text-slate-400">Blob ID: walrus://3BxGhz...f8Kp</span>{'\n'}
+      <span className="text-primary">Sui tx:</span> <span className="text-slate-400">0xabc123...def456</span>
+    </span>
+  ) },
 ];
 
 export default function HowItWorksSection() {
@@ -32,13 +41,6 @@ export default function HowItWorksSection() {
   return (
     <section id="how-it-works" className="border-b border-border bg-surface-low">
       <div className="mx-auto max-w-[1400px] px-6 py-16 md:py-24">
-        <div className="text-center">
-          <h2 className="text-headline-lg">1. Build. 2. Run. 3. Dataset.</h2>
-          <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-            Persistent memory at every step. Every node remembers its actions. Every run learns from the last.
-          </p>
-        </div>
-
         <div className="mt-10 flex justify-center gap-1">
           {TABS.map((tab) => (
             <button
@@ -65,7 +67,7 @@ export default function HowItWorksSection() {
             </span>
           </div>
           <div className="p-5 overflow-x-auto">
-            <pre className="text-mono text-[13px] leading-relaxed text-slate-300">
+            <pre className="text-mono text-[13px] leading-relaxed">
               <code>{activeTab.code}</code>
             </pre>
           </div>
