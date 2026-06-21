@@ -72,7 +72,9 @@ function ZkLoginCallback() {
         localStorage.removeItem("zklogin_ephemeral");
         window.dispatchEvent(new CustomEvent("zklogin:connected"));
 
-        navigate({ to: "/" });
+        const returnTo = localStorage.getItem("zklogin_return_to") || "/";
+        localStorage.removeItem("zklogin_return_to");
+        navigate({ to: returnTo });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         console.error("zkLogin callback error:", err);

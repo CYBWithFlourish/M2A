@@ -18,6 +18,7 @@ export function useSui() {
 
 const ZKL_SERVICE = "https://zklservicest3rdwl.up.railway.app";
 const ZKL_API_KEY = (import.meta as any).env?.VITE_ZKL_API_KEY || "";
+const RUNTIME_URL = (import.meta as any).env?.VITE_RUNTIME_URL || "http://localhost:3001";
 
 export function SuiProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export function SuiProvider({ children }: { children: ReactNode }) {
       }),
     );
 
-    const redirect = encodeURIComponent(`${window.location.origin}/zklogin-callback`);
+    const redirect = encodeURIComponent(`${RUNTIME_URL}/auth/callback`);
     window.location.href = `${ZKL_SERVICE}/auth/google?nonce=${encodeURIComponent(nonce)}&api_key=${ZKL_API_KEY}&redirect=${redirect}`;
   }, []);
 
