@@ -8,7 +8,7 @@ export default function HeroSection() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-body-lg text-muted-foreground">
-          Visual workflow builder powered by Walrus and MemWal. Drag, connect, and compose Sui protocols — DeFi, bridges, oracles, NFTs. Every execution leaves a permanent, privacy-safe dataset you can verify on-chain.
+          Visual workflow builder powered by Walrus and MemWal. Drag, connect, and compose Sui protocols: DeFi, bridges, oracles, NFTs. Every execution leaves a permanent, privacy-safe dataset you can verify on-chain.
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-3">

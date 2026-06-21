@@ -5,7 +5,7 @@ export default function CommunitySection() {
         <div className="text-center">
           <h2 className="text-headline-lg">Building on the Sui stack, <span className="text-primary">made simple.</span></h2>
           <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-            Connecting to Sui protocols shouldn't require reading Move source code. M2A wraps every major Sui primitive into a drag-and-drop node — DeFi, bridges, oracles, NFTs, liquid staking. Compose them visually, run them as workflows, get verifiable datasets as output.
+            Connecting to Sui protocols shouldn't require reading Move source code. M2A wraps every major Sui primitive into a drag-and-drop node, DeFi, bridges, oracles, NFTs, liquid staking. Compose them visually, run them as workflows, get verifiable datasets as output.
           </p>
         </div>
 
@@ -23,16 +23,16 @@ export default function CommunitySection() {
           </a>
           <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-medium text-slate-400">
             <span className="text-success">●</span>
-            Open Source — GPL v3
+            Open Source, GPL v3
           </div>
         </div>
 
         <div className="mt-12 mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
           <blockquote className="text-sm text-slate-400 italic leading-relaxed">
-            "We built M2A because every major Sui protocol deserves a drag-and-drop node. DeFi traders shouldn't need to read Move to compose a swap-and-lend strategy. Developers shouldn't need to manage five SDKs to bridge assets and monitor positions. The Sui ecosystem is rich — the tooling to connect it all should be simple."
+            "We built M2A because every major Sui protocol deserves a drag-and-drop node. DeFi traders shouldn't need to read Move to compose a swap-and-lend strategy. Developers shouldn't need to manage five SDKs to bridge assets and monitor positions. The Sui ecosystem is rich, the tooling to connect it all should be simple."
           </blockquote>
-          <p className="mt-4 text-label-bold text-primary">— M2A Core Team</p>
+          <p className="mt-4 text-label-bold text-primary">M2A Core Team</p>
         </div>
       </div>
     </section>

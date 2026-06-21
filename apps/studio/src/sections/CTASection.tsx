@@ -8,7 +8,7 @@ export default function CTASection() {
         <div className="relative z-10">
           <h2 className="text-headline-lg">Start building automations that generate verifiable data.</h2>
           <p className="mt-4 text-muted-foreground max-w-md mx-auto">
-            Build automations on a visual canvas. Every run produces a verifiable, privacy-safe dataset — automatically.
+            Build automations on a visual canvas. Every run produces a verifiable, privacy-safe dataset, automatically.
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">

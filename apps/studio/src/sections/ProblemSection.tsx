@@ -25,7 +25,7 @@ export default function ProblemSection() {
               </div>
               <div className="flex gap-3 items-start">
                 <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-danger/30 bg-danger/10 text-danger text-xs">3</span>
-                <p className="text-sm text-slate-400">Data evaporates — nothing compounds</p>
+                <p className="text-sm text-slate-400">Data evaporates, nothing compounds</p>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-danger/30 bg-danger/10 text-danger text-xs">4</span>
@@ -59,7 +59,7 @@ export default function ProblemSection() {
               </div>
               <div className="flex gap-3 items-start">
                 <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-success/30 bg-success/10 text-success text-xs">4</span>
-                <p className="text-sm text-slate-400">Data compounds across runs — smarter over time</p>
+                <p className="text-sm text-slate-400">Data compounds across runs, smarter over time</p>
               </div>
             </div>
             <div className="mt-8 rounded-lg border border-success/30 bg-success/5 px-4 py-3">

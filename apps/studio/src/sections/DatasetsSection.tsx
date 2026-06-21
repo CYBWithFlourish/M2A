@@ -5,7 +5,7 @@ export default function DatasetsSection() {
         <div className="text-center">
           <h2 className="text-headline-lg">Every automation you run produces a verifiable dataset.</h2>
           <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-            Privacy-preserving pipeline: capture, redact, verify, and publish to Walrus — automatically, on every run.
+            Privacy-preserving pipeline: capture, redact, verify, and publish to Walrus, automatically, on every run.
           </p>
         </div>
 
