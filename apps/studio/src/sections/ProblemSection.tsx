@@ -3,7 +3,7 @@ export default function ProblemSection() {
     <section className="border-b border-border bg-surface-low">
       <div className="mx-auto max-w-[1400px] px-6 py-16 md:py-24">
         <div className="text-center">
-          <h2 className="text-headline-lg">Automation platforms today run workflows. <span className="text-primary">Then the value disappears.</span></h2>
+          <h2 className="text-2xl sm:text-3xl md:text-[36px] lg:text-[32px] font-bold tracking-tight">Automation platforms today run workflows. <span className="text-primary">Then the value disappears.</span></h2>
           <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
             No verifiable record. No reusable data. Nothing compounds. Every run starts from zero.
           </p>
