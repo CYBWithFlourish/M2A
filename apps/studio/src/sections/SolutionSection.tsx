@@ -1,46 +1,83 @@
 export default function SolutionSection() {
   return (
-    <section id="solution" className="border-b border-border bg-surface">
+    <section className="border-b border-border">
       <div className="mx-auto max-w-[1400px] px-6 py-16 md:py-24">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-white">
-            An automation engine that gets smarter every time you use it.
-          </h2>
-          <p className="mt-4 text-slate-400 max-w-2xl mx-auto">
-            Three primitives. Workflow engine to build. Dataset generation to compound. Memory to make it smart.
+        <div className="text-center">
+          <h2 className="text-headline-lg">Infrastructure-grade memory for AI agents.</h2>
+          <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
+            Three core primitives that turn ephemeral agent sessions into persistent, verifiable knowledge.
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <div className="rounded-xl border border-border bg-surface-container p-6">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary mb-4">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="rounded-xl border border-border bg-card p-7 group hover:border-primary/40 transition-all hover:-translate-y-0.5">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                <path d="M21 3v5h-5" />
+                <path d="M12 8v4l3 3" />
+              </svg>
+            </span>
+            <h3 className="mt-5 text-headline-md">Persistent Memory</h3>
+            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+              Every agent decision, chain-of-thought trace, and tool output is written to Walrus. Retrievable across sessions — forever.
+            </p>
+            <div className="mt-6 rounded-lg border border-border bg-surface px-3 py-2.5">
+              <pre className="text-mono text-slate-500 text-[11px] leading-relaxed overflow-x-auto">
+                <span className="text-primary">const</span> memory = buiry.memory(<span className="text-warning">"agent-7"</span>);{'\n'}
+                <span className="text-primary">await</span> memory.remember({'\n'}
+                {"  "}key: <span className="text-success">"research/topic"</span>,{'\n'}
+                {"  "}value: summary,{'\n'}
+                {"  "}proof: txDigest{'\n'}
+                );
+              </pre>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Workflow Engine</h3>
-            <p className="text-sm text-slate-400 mb-3">Visual canvas, 48 node types, drag-connect-execute. Like n8n but on-chain.</p>
-            <p className="text-xs text-slate-500">Compose automations visually. Parallel execution, branching, conditional logic. Every run verified on Sui.</p>
-            <div className="mt-3 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase">48 node types</div>
           </div>
-          <div className="rounded-xl border-2 border-primary/30 bg-surface-container p-6 ring-1 ring-primary/10 md:col-span-1">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-success/10 text-success mb-4">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Dataset Generation</h3>
-            <p className="text-sm text-slate-400 mb-3">Every automation run produces a verifiable, privacy-safe dataset — automatically. This is what n8n doesn't do.</p>
-            <p className="text-xs text-slate-500">The Data Processing Agent captures interactions, strips PII at entry, aggregates into statistical claims, verifies privacy, and publishes to Walrus. You get training data without lifting a finger.</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success uppercase">Privacy 100/100</span>
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase">Walrus Blob</span>
-              <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning uppercase">Verifiable</span>
+
+          <div className="rounded-xl border border-border bg-card p-7 group hover:border-primary/40 transition-all hover:-translate-y-0.5">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </span>
+            <h3 className="mt-5 text-headline-md">Workflow Engine</h3>
+            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+              Compose 48 node types into sophisticated agent workflows. Parallel execution, branching, and human-in-the-loop.
+            </p>
+            <div className="mt-6 rounded-lg border border-border bg-surface px-3 py-2.5">
+              <pre className="text-mono text-slate-500 text-[11px] leading-relaxed overflow-x-auto">
+                <span className="text-primary">const</span> buiry = <span className="text-primary">new</span> Buiry({'{'}{'\n'}
+                {"  "}namespace: <span className="text-success">"research"</span>,{'\n'}
+                {"  "}signer: keypair.getKeypair(){'\n'}
+                {'}'});
+              </pre>
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-surface-container p-6">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-warning/10 text-warning mb-4">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+
+          <div className="rounded-xl border border-border bg-card p-7 group hover:border-primary/40 transition-all hover:-translate-y-0.5">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </span>
+            <h3 className="mt-5 text-headline-md">Dataset Generation</h3>
+            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+              Every interaction is a dataset. Privacy-preserving redaction produces clean training data stored on Walrus as verifiable blobs.
+            </p>
+            <div className="mt-6 rounded-lg border border-border bg-surface px-3 py-2.5">
+              <pre className="text-mono text-slate-500 text-[11px] leading-relaxed overflow-x-auto">
+                <span className="text-primary">const</span> dataset = buiry.dataset({'\n'}
+                {"  "}privacy: <span className="text-success">"redact"</span>,{'\n'}
+                {"  "}compress: <span className="text-primary">true</span>{'\n'}
+                );
+              </pre>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Persistent Memory</h3>
-            <p className="text-sm text-slate-400 mb-3">The mechanism that makes automations smarter across runs — and datasets more valuable.</p>
-            <p className="text-xs text-slate-500">This is how M2A's automations stay smart across runs. Agents recall context across sessions. Every write is a Sui transaction — immutable proof.</p>
-            <div className="mt-3 inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning uppercase">3-tier namespaces</div>
           </div>
         </div>
       </div>

@@ -84,7 +84,6 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
           </button>
         )}
       </div>
-      </div>
 
       <div className="ml-auto flex items-center gap-2">
         <button
