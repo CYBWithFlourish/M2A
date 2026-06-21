@@ -5,7 +5,7 @@ export default function ProblemSection() {
         <div className="text-center mb-16">
           <h2 className="font-display text-3xl sm:text-4xl md:text-[42px] font-bold tracking-tight leading-tight text-white">
             Automation platforms today run workflows.<br />
-            Then the value disappears.
+            <span className="text-primary">Then the value disappears.</span>
           </h2>
         </div>
 
