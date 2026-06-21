@@ -17,6 +17,40 @@ import { switchboardService } from './services/SwitchboardService.js';
 import { tradeportService } from './services/nft/TradePortService.js';
 import { eventTriggerService } from './services/EventTriggerService.js';
 import { storeToWalrus, fetchFromWalrus } from './tools/WalrusTools.js';
+import { deepBookService } from './services/defi/DeepBookService.js';
+import { cetusService } from './services/defi/CetusService.js';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { fromBase64, fromHex } from '@mysten/sui/utils';
+import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { createSuiClient } from '../config.js';
+
+const execClient = createSuiClient();
+
+async function trySubmitTx(txBytes: string, delegateKey: string): Promise<{ digest?: string; error?: string }> {
+  try {
+    let secretKeyBytes: Uint8Array;
+    if (delegateKey.startsWith('suiprivkey')) {
+      secretKeyBytes = decodeSuiPrivateKey(delegateKey).secretKey;
+    } else if (/^[0-9a-fA-F]{64}$/.test(delegateKey)) {
+      secretKeyBytes = fromHex(delegateKey);
+    } else {
+      return { error: 'delegate key is not a private key' };
+    }
+    const keypair = Ed25519Keypair.fromSecretKey(secretKeyBytes);
+    const { signature } = await keypair.signTransaction(fromBase64(txBytes));
+    const result = await execClient.executeTransaction({
+      transaction: fromBase64(txBytes),
+      signatures: [signature],
+      include: { effects: true, events: true },
+    });
+    if (result.$kind !== 'Transaction') {
+      return { error: 'Transaction execution failed', digest: result.FailedTransaction.digest };
+    }
+    return { digest: result.Transaction.digest };
+  } catch (e: any) {
+    return { error: e.message };
+  }
+}
 
 export interface NodeHandlerResult {
   output: string;
@@ -636,6 +670,189 @@ export class BluefinNodeHandler implements NodeHandler {
     }
 
     return { output: `Unknown Bluefin action: ${action}` };
+  }
+}
+
+export class CetusTradeNodeHandler implements NodeHandler {
+  canHandle(node: WorkflowNode): boolean {
+    return (node.type as string) === 'cetus_trade';
+  }
+
+  async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
+    const data = node.data as Record<string, unknown> | undefined;
+    const action = (data?.action as string) || 'swap';
+    const poolId = (data?.poolId as string) || inputs[0] || '';
+    const coinIn = (data?.coinIn as string) || '0x2::sui::SUI';
+    const coinOut = (data?.coinOut as string) || '';
+    const amount = (data?.amount as string) || '1000000000';
+    const slippage = (data?.slippage as number) || 0.5;
+    const walletAddress = context.accountId || context.agentWallet?.address || '';
+
+    try {
+      switch (action) {
+        case 'get_pool_info': {
+          const result = await cetusService.execute('getPoolInfo', { poolId }, context);
+          return { output: JSON.stringify(result), metadata: { protocol: 'cetus', action } };
+        }
+        case 'estimate_swap': {
+          const result = await cetusService.execute('estimateSwap', { poolId, amount, side: coinIn }, context);
+          return { output: JSON.stringify(result), metadata: { protocol: 'cetus', action } };
+        }
+        case 'swap':
+        default: {
+          const result = await cetusService.execute('buildSwapTx', {
+            poolId, amount, side: coinIn, minOutput: String(Math.floor(Number(amount) * (1 - slippage / 100))), wallet: { address: walletAddress },
+          }, context);
+          return { output: JSON.stringify(result), metadata: { protocol: 'cetus', action } };
+        }
+      }
+    } catch (err: any) {
+      return { output: JSON.stringify({ error: err.message, protocol: 'cetus' }) };
+    }
+  }
+}
+
+export class CetusLendNodeHandler implements NodeHandler {
+  canHandle(node: WorkflowNode): boolean {
+    return (node.type as string) === 'cetus_lend';
+  }
+
+  async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
+    const data = node.data as Record<string, unknown> | undefined;
+    const action = (data?.action as string) || 'supply';
+    const amount = (data?.amount as string) || inputs[0] || '1000000000';
+
+    if (action === 'borrow' || action === 'repay') {
+      return {
+        output: JSON.stringify({ protocol: 'cetus', action, note: 'Use NAVI or Suilend for lending. Cetus is a DEX, not a lending protocol.' }),
+        metadata: { protocol: 'cetus' },
+      };
+    }
+
+    const poolId = (data?.poolId as string) || '';
+    const coinTypeA = (data?.coinTypeA as string) || '0x2::sui::SUI';
+    const coinTypeB = (data?.coinTypeB as string) || '';
+    const positionId = (data?.positionId as string) || '';
+
+    const amountMist = String(BigInt(Math.floor(parseFloat(amount) * 1_000_000_000)));
+
+    return {
+      output: JSON.stringify({
+        protocol: 'cetus',
+        action,
+        amount: `${amount} ${coinTypeA}`,
+        poolId,
+        note: 'Cetus deposits use add-liquidity via the Cetus CLMM. In the canvas, this builds a transaction for simulation/signing.',
+        simulatedTx: true,
+      }),
+      metadata: { protocol: 'cetus', action },
+    };
+  }
+}
+
+export class DeepBookTradeNodeHandler implements NodeHandler {
+  canHandle(node: WorkflowNode): boolean {
+    return (node.type as string) === 'deepbook_trade';
+  }
+
+  async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
+    const data = node.data as Record<string, unknown> | undefined;
+    const action = (data?.action as string) || 'get_pool_info';
+    const poolId = (data?.pool as string) || inputs[0] || '';
+    const amount = (data?.amount as string) || '1000000000';
+    const side = (data?.side as string) || 'bid';
+    const price = (data?.price as string) || '';
+
+    switch (action) {
+      case 'get_pool_info': {
+        if (!poolId) return { output: JSON.stringify({ error: 'pool ID required' }) };
+        const result = await deepBookService.execute('getPoolInfo', { poolId }, context);
+        return { output: JSON.stringify(result), metadata: { protocol: 'deepbook', action: 'get_pool_info' } };
+      }
+      case 'get_pools': {
+        const result = await deepBookService.execute('getPools', {}, context);
+        return { output: JSON.stringify(result), metadata: { protocol: 'deepbook', action: 'get_pools' } };
+      }
+      case 'get_order_book': {
+        if (!poolId) return { output: JSON.stringify({ error: 'pool ID required' }) };
+        const result = await deepBookService.execute('getOrderBook', { poolId }, context);
+        return { output: JSON.stringify(result), metadata: { protocol: 'deepbook', action: 'get_order_book' } };
+      }
+      case 'estimate_swap': {
+        if (!poolId) return { output: JSON.stringify({ error: 'pool ID required' }) };
+        const result = await deepBookService.execute('estimateSwap', { poolId, amount, side }, context);
+        return { output: JSON.stringify(result), metadata: { protocol: 'deepbook', action: 'estimate_swap' } };
+      }
+      case 'swap': {
+        if (!poolId) return { output: JSON.stringify({ error: 'pool ID required' }) };
+        const minOutput = data?.minOutput as string || Math.floor(Number(amount) * 0.98).toString();
+        const result = await deepBookService.execute('buildSwapTx', {
+          poolId, amount, side, minOutput, wallet: { address: context.accountId || '' },
+        }, context);
+        return { output: JSON.stringify(result), metadata: { protocol: 'deepbook', action: 'swap' } };
+      }
+      case 'swap_and_submit': {
+        if (!poolId) return { output: JSON.stringify({ error: 'pool ID required' }) };
+        const minOutput = data?.minOutput as string || Math.floor(Number(amount) * 0.98).toString();
+        const result = await deepBookService.execute('buildSwapTx', {
+          poolId, amount, side, minOutput, wallet: { address: context.accountId || '' },
+        }, context);
+        const txBytes = (result as any)?.txBytes;
+        if (!txBytes) return { output: JSON.stringify({ ...result, error: 'no tx bytes to submit' }) };
+
+        // Try server-side signing with delegateKey (platform key)
+        const submitResult = await trySubmitTx(txBytes, context.delegateKey || '');
+        // If delegateKey was a private key, submission already happened
+        const signed = !submitResult.error;
+
+        return {
+          output: JSON.stringify({
+            ...result,
+            submission: signed
+              ? { digest: submitResult.digest, status: 'submitted' }
+              : { note: 'Transaction built. Sign via frontend with zkLogin key.' },
+          }),
+          metadata: {
+            protocol: 'deepbook',
+            action: 'swap_and_submit',
+            txBytes,          // always pass txBytes for frontend auto-sign
+            ...(signed ? {} : { needsSigning: true }),
+          },
+        };
+      }
+      case 'limit_order':
+        return { output: JSON.stringify({ error: 'limit_order requires skill execution', action: 'limit_order', pool: poolId, amount, price }) };
+      case 'cancel_order':
+        return { output: JSON.stringify({ error: 'cancel_order requires skill execution', action: 'cancel_order', pool: poolId }) };
+      default:
+        return { output: JSON.stringify({ error: `Unknown DeepBook trade action: ${action}` }) };
+    }
+  }
+}
+
+export class DeepBookLendNodeHandler implements NodeHandler {
+  canHandle(node: WorkflowNode): boolean {
+    return (node.type as string) === 'deepbook_lend';
+  }
+
+  async execute(node: WorkflowNode, inputs: string[], context: any): Promise<NodeHandlerResult> {
+    const data = node.data as Record<string, unknown> | undefined;
+    const action = (data?.action as string) || 'deposit';
+    const poolId = (data?.pool as string) || inputs[0] || '';
+    const amount = (data?.amount as string) || '1000000000';
+    const token = (data?.token as string) || (data?.assetType as string) || '0x2::sui::SUI';
+
+    return {
+      output: JSON.stringify({
+        protocol: 'deepbook',
+        action,
+        pool: poolId,
+        amount,
+        token,
+        note: 'DeepBook lending operations require skill-based execution with DeepBookClient. Use the Agent node with DeepBook lending tool for full execution, or submit the transaction directly.',
+      }),
+      metadata: { protocol: 'deepbook', action },
+    };
   }
 }
 
@@ -1316,6 +1533,8 @@ export const nodeHandlers: NodeHandler[] = [
   new SuiBridgeNodeHandler(),
   new AlphaFiNodeHandler(),
   new BluefinNodeHandler(),
+  new DeepBookTradeNodeHandler(),
+  new DeepBookLendNodeHandler(),
   new PythNodeHandler(),
   new SwitchboardNodeHandler(),
   new TradeportNodeHandler(),

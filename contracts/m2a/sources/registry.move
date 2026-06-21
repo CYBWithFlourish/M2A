@@ -4,6 +4,10 @@ use sui::object::{Self, ID, UID};
 use sui::table::{Self as table, Table};
 use sui::transfer;
 use sui::tx_context::TxContext;
+use std::vector;
+
+/// The wallet address is already registered as an agent.
+const EDuplicateAgentWallet: u64 = 0;
 
 public struct AgentRegistry has key, store {
     id: UID,
@@ -29,6 +33,7 @@ public fun register_agent(
     policy_id: ID,
     owner: address,
 ) {
+    assert!(!registry.agents.contains(agent_wallet), EDuplicateAgentWallet);
     registry.agents.add(agent_wallet, policy_id);
 
     if (registry.owners.contains(owner)) {
@@ -38,6 +43,26 @@ public fun register_agent(
         let mut list: vector<ID> = vector[];
         list.push_back(policy_id);
         registry.owners.add(owner, list);
+    };
+}
+
+public fun remove_agent(
+    registry: &mut AgentRegistry,
+    agent_wallet: address,
+    owner: address,
+) {
+    let policy_id = registry.agents.remove(agent_wallet);
+    if (registry.owners.contains(owner)) {
+        let list = registry.owners.borrow_mut(owner);
+        let mut i = 0;
+        let len = vector::length(list);
+        while (i < len) {
+            if (list[i] == policy_id) {
+                vector::remove(list, i);
+                break
+            };
+            i = i + 1;
+        };
     };
 }
 

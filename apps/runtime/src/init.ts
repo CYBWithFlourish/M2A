@@ -97,8 +97,33 @@ const BUILTIN_TEMPLATES = [
       nodes: [
         { id: 'input_1', type: 'input', position: { x: 50, y: 200 }, data: { label: 'Input', type: 'input' } },
         { id: 'sui_1', type: 'sui', position: { x: 50, y: 350 }, data: { label: 'Price Feed', type: 'sui' } },
-        { id: 'agent_1', type: 'agent', position: { x: 350, y: 200 }, data: { label: 'Trading Agent', type: 'agent', directives: 'Analyze market data and execute trades.' } },
-        { id: 'output_1', type: 'output', position: { x: 650, y: 200 }, data: { label: 'Output', type: 'output' } },
+        { id: 'agent_1', type: 'agent', position: { x: 350, y: 200 }, data: { label: 'Trading Agent', type: 'agent', directives: 'You are an automated DeFi trading agent. You have access to DeepBook, Cetus, Aftermath, and other DeFi protocols. Analyze market data using the Sui Query tool, then build and simulate trades using the available DeFi tools. Always explain your analysis before executing any trade.' } },
+      ],
+      edges: [
+        { id: 'e1', source: 'input_1', target: 'agent_1' },
+        { id: 'e2', source: 'sui_1', target: 'agent_1' },
+        { id: 'e3', source: 'agent_1', target: 'output_1' },
+      ],
+    },
+  },
+  {
+    id: 'deepbook-trading',
+    name: 'DeepBook DEX Trader',
+    description: 'Execute token swaps and limit orders using DeepBook order-book DEX',
+    category: 'DeFi',
+    owner: '',
+    is_public: true,
+    fork_count: 0,
+    definition: {
+      id: 'deepbook-trading',
+      name: 'DeepBook DEX Trader',
+      version: '1.0.0',
+      namespace_prefix: '',
+      nodes: [
+        { id: 'input_1', type: 'input', position: { x: 50, y: 200 }, data: { label: 'Trade Input', type: 'input' } },
+        { id: 'sui_1', type: 'sui', position: { x: 50, y: 360 }, data: { label: 'Price Feed', type: 'sui' } },
+        { id: 'agent_1', type: 'agent', position: { x: 350, y: 200 }, data: { label: 'DeepBook Trader', type: 'agent', directives: 'You are a DeepBook DEX trading agent. You can use the defi-deepbook-trade tool to execute swaps, limit orders, and cancel orders on DeepBook, and the defi-deepbook-lend tool for lending operations. First check the pool info using sui_query, then execute the requested trade. Only simulate trades unless user explicitly asks for live execution.' } },
+        { id: 'output_1', type: 'output', position: { x: 650, y: 200 }, data: { label: 'Trade Result', type: 'output' } },
       ],
       edges: [
         { id: 'e1', source: 'input_1', target: 'agent_1' },

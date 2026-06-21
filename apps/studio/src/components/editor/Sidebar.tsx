@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Search, FolderOpen, History, Boxes, PanelLeftClose, PanelRightOpen, Loader2, RefreshCw, Play } from "lucide-react";
+import { Search, FolderOpen, History, Boxes, PanelLeftClose, PanelRightOpen, Loader2, RefreshCw, Play, Trash2 } from "lucide-react";
 import { CATEGORY_ORDER, NODE_CATALOG, type NodeDef } from "@/lib/nodes";
 import { useWorkflow } from "@/lib/workflow-context";
 import { api } from "@/lib/api";
@@ -160,6 +160,7 @@ function WorkflowsTab() {
   const { loadWorkflow } = useWorkflow();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -168,6 +169,20 @@ function WorkflowsTab() {
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (deleting) return;
+    if (!window.confirm(`Delete "${name || id}"? This cannot be undone.`)) return;
+    setDeleting(id);
+    try {
+      await api.deleteWorkflow(id);
+      setItems(prev => prev.filter(w => w.id !== id));
+    } catch {
+      alert('Failed to delete workflow');
+    } finally {
+      setDeleting(null);
+    }
+  }, [deleting]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -201,16 +216,25 @@ function WorkflowsTab() {
       </div>
       <div className="space-y-1.5">
         {items.map((w) => (
-          <button
-            key={w.id}
-            onClick={() => loadWorkflow(w.id)}
-            className="flex w-full items-center gap-2 rounded-md border border-border bg-surface-container px-2.5 py-2 text-left hover:bg-accent transition"
-          >
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary/15 text-primary">
-              <Play className="h-3 w-3" />
-            </span>
-            <span className="min-w-0 flex-1 text-xs font-medium truncate">{w.name || w.id}</span>
-          </button>
+          <div key={w.id} className="group flex items-center gap-1">
+            <button
+              onClick={() => loadWorkflow(w.id)}
+              className="flex flex-1 items-center gap-2 rounded-md border border-border bg-surface-container px-2.5 py-2 text-left hover:bg-accent transition"
+            >
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary/15 text-primary">
+                <Play className="h-3 w-3" />
+              </span>
+              <span className="min-w-0 flex-1 text-xs font-medium truncate">{w.name || w.id}</span>
+            </button>
+            <button
+              onClick={() => handleDelete(w.id, w.name)}
+              disabled={deleting === w.id}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition"
+              title="Delete workflow"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ))}
       </div>
     </div>

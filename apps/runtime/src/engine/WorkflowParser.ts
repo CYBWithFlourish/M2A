@@ -14,6 +14,7 @@ export interface WorkflowEvent {
   error?: string;
   status?: string;
   results?: Record<string, string>;
+  metadata?: Record<string, unknown>;
   timestamp: number;
 }
 
@@ -114,6 +115,7 @@ export class WorkflowParser {
                   nodeId: node.id,
                   nodeLabel,
                   output: result.output,
+                  metadata: result.metadata,
                   timestamp: Date.now(),
                 });
               } catch (e: any) {

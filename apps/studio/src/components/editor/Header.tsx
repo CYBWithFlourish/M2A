@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, MoreHorizontal, Play, Loader2, Plus, Wallet, Sun, Moon, LayoutDashboard, LogOut, Save, Rocket, Power } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, MoreHorizontal, Play, Loader2, Plus, Wallet, Sun, Moon, LayoutDashboard, LogOut, Save, Rocket, Power, Trash2, Coins } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useTheme } from "@/lib/theme";
 import { useWorkflow } from "@/lib/workflow-context";
 import { useCurrentAccount, useDAppKit } from "@mysten/dapp-kit-react";
@@ -29,6 +29,31 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
   const agent = agents.find((a) => a.id === selectedAgentId);
   const [editing, setEditing] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [agentBalance, setAgentBalance] = useState<string | null>(null);
+  const [deletingAgent, setDeletingAgent] = useState(false);
+
+  useEffect(() => {
+    setAgentBalance(null);
+    if (!agent?.id) return;
+    api.getAgentBalance(agent.id)
+      .then(b => setAgentBalance(b.totalBalance))
+      .catch(() => {});
+  }, [agent?.id]);
+
+  const handleDeleteAgent = async () => {
+    if (!agent || deletingAgent) return;
+    if (!window.confirm(`Delete agent "${agent.name}"? The on-chain policy will remain.`)) return;
+    setDeletingAgent(true);
+    try {
+      await api.deleteAgent(agent.id);
+      dispatch({ type: "select_agent", id: null });
+      notify.success('Agent deleted');
+    } catch {
+      notify.error('Failed to delete agent');
+    } finally {
+      setDeletingAgent(false);
+    }
+  };
 
   const isConnected = !!walletAccount;
   const address = walletAccount?.address ?? null;
@@ -122,29 +147,63 @@ export function EditorHeader({ onCreateAgent, onTopUp, onTemplates, onConnectWal
           <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
         </Link>
 
-        {agent && (
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 rounded-full border border-border bg-surface-container px-3 py-1.5 text-xs font-medium hover:bg-accent">
-              <span className={`h-1.5 w-1.5 rounded-full ${agent.status === "active" ? "bg-success" : "bg-danger"}`} />
-              {agent.name}
-              <span className="text-muted-foreground">
-                {agent.budgetUsed}/{agent.budgetCap} SUI
-              </span>
-              <ChevronDown className="h-3 w-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60">
-              {agents.map((a) => (
-                <DropdownMenuItem key={a.id}>
-                  <span className={`mr-2 h-1.5 w-1.5 rounded-full ${a.status === "active" ? "bg-success" : "bg-danger"}`} />
-                  {a.name}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-full border border-border bg-surface-container px-3 py-1.5 text-xs font-medium hover:bg-accent">
+            {agent ? (
+              <>
+                <span className={`h-1.5 w-1.5 rounded-full ${agent.status === "active" ? "bg-success" : "bg-danger"}`} />
+                {agent.name}
+                <span className="text-muted-foreground">
+                  {agent.budgetUsed}/{agent.budgetCap} SUI
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">No agent selected</span>
+            )}
+            <ChevronDown className="h-3 w-3" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
+            {agents.length === 0 && (
+              <div className="px-3 py-2 text-xs text-muted-foreground">No agents yet</div>
+            )}
+            {agents.map((a) => (
+              <DropdownMenuItem key={a.id} onClick={() => dispatch({ type: "select_agent", id: a.id })}>
+                <span className={`mr-2 h-1.5 w-1.5 rounded-full ${a.status === "active" ? "bg-success" : "bg-danger"}`} />
+                <span className="flex-1 truncate">{a.name}</span>
+                {a.id === selectedAgentId && <span className="ml-2 text-[10px] text-primary">active</span>}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            {agent && (
+              <>
+                <div className="px-3 py-1.5 text-[11px] text-muted-foreground space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Budget</span>
+                    <span>{agent.budgetUsed ?? 0} / {agent.budgetCap ?? 0} SUI</span>
+                  </div>
+                  {agentBalance !== null && (
+                    <div className="flex justify-between">
+                      <span>Wallet</span>
+                      <span className="flex items-center gap-1"><Coins className="h-3 w-3" />{(Number(agentBalance) / 1_000_000_000).toFixed(4)} SUI</span>
+                    </div>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={onTopUp} disabled={!agent}>Top up agent</DropdownMenuItem>
+            <DropdownMenuItem onClick={onCreateAgent}>+ Create new agent</DropdownMenuItem>
+            {agent && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDeleteAgent} disabled={deletingAgent} className="text-destructive">
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  {deletingAgent ? 'Deleting…' : 'Delete agent'}
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onTopUp}>Top up agent</DropdownMenuItem>
-              <DropdownMenuItem onClick={onCreateAgent}>+ Create new agent</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <button
           onClick={onCreateAgent}

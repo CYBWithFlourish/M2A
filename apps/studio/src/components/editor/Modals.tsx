@@ -4,7 +4,6 @@ import { Check, Loader2, Search, X, ExternalLink, Wallet, ArrowRight, AlertCircl
 import { useWorkflow, type Agent, type CanvasNode, type Connection } from "@/lib/workflow-context";
 import { api } from "@/lib/api";
 import { useWallets, useDAppKit, useCurrentAccount } from "@mysten/dapp-kit-react";
-import { CurrentAccountSigner } from "@mysten/dapp-kit-core";
 import { notify } from "@/lib/toast";
 import { startAgentZkLogin, getAgentWalletSession, clearAgentWalletSession } from "@/lib/agent-wallet";
 
@@ -144,8 +143,8 @@ export function TemplateMarketplace({ open, onClose }: { open: boolean; onClose:
 }
 
 /* ------------ Create Agent ------------ */
-const PROTOCOLS = ["Aftermath", "Navi", "Cetus", "Bluefin", "Suilend"];
-const TOOLS = ["Walrus Storage", "Sui RPC", "Price Feeds", "AI Memory"];
+const PROTOCOLS = ["Aftermath", "Navi", "Cetus", "Bluefin", "Suilend", "DeepBook", "AlphaFi", "Bucket", "Haedal", "Volo"];
+const TOOLS = ["Walrus Storage", "Sui RPC", "Price Feeds", "AI Memory", "DeepBook Trade", "DeepBook Lending"];
 
 const M2A_PACKAGE = import.meta.env.VITE_M2A_PACKAGE_ID;
 const M2A_REGISTRY = import.meta.env.VITE_M2A_REGISTRY_ID;
@@ -200,10 +199,15 @@ export function CreateAgentDialog({ open, onClose }: { open: boolean; onClose: (
           tx.pure.u64(0n),
         ],
       });
+      // Fund agent wallet immediately with budget amount
+      if (budget > 0) {
+        const amountMist = BigInt(budget * 1_000_000_000);
+        const [fundCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+        tx.transferObjects([fundCoin], tx.pure.address(agentWallet.address));
+      }
       tx.setSender(ownerAddress!);
 
-      const signer = new CurrentAccountSigner(dAppKit);
-      const { bytes, signature } = await tx.sign({ signer });
+      const { bytes, signature } = await dAppKit.signTransaction({ transaction: tx });
 
       const result = await api.registerAgent({
         name,
@@ -394,20 +398,56 @@ function Pills({ options, selected, onChange }: { options: string[]; selected: s
 export function TopUpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { agents, selectedAgentId } = useWorkflow();
   const agent = agents.find((a) => a.id === selectedAgentId);
+  const walletAccount = useCurrentAccount();
+  const dAppKit = useDAppKit();
   const [amount, setAmount] = useState(10);
+  const [topUpState, setTopUpState] = useState<"idle" | "signing" | "done" | "error">("idle");
+  const [txDigest, setTxDigest] = useState("");
+  const [txError, setTxError] = useState("");
+
+  const handleTopUp = async () => {
+    if (!walletAccount || !agent) return;
+    setTopUpState("signing");
+    setTxError("");
+
+    try {
+      const amountMist = BigInt(Math.round(amount * 1_000_000_000));
+      const tx = new Transaction();
+      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+      tx.transferObjects([coin], tx.pure.address(agent.address));
+      tx.setSender(walletAccount.address);
+
+      const { bytes, signature } = await dAppKit.signTransaction({ transaction: tx });
+
+      const result = await api.topUpAgent(agent.id, {
+        txBytes: bytes,
+        signatures: [signature],
+        amount,
+      });
+
+      setTxDigest(result.txDigest || "");
+      setTopUpState("done");
+      notify.success(`Topped up ${agent.name} with ${amount} SUI`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Top-up failed";
+      setTxError(msg);
+      setTopUpState("error");
+      notify.error("Top-up failed: " + msg);
+    }
+  };
 
   return (
     <Shell open={open} onClose={onClose}>
       <div className="border-b border-border px-6 py-5">
         <h2 className="font-display text-lg font-semibold">Top Up Agent</h2>
-        <p className="text-xs text-muted-foreground">Add SUI to the agent's spending budget.</p>
+        <p className="text-xs text-muted-foreground">Send SUI to the agent's wallet and increase its budget cap.</p>
       </div>
       <div className="space-y-4 px-6 py-5">
         {agent && (
           <div className="rounded-md border border-border bg-surface-container p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold">{agent.name}</span>
-              <span className="font-mono text-muted-foreground">{agent.address}</span>
+              <span className="font-mono text-muted-foreground">{agent.address.slice(0, 6)}...{agent.address.slice(-4)}</span>
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               Budget: {agent.budgetUsed} / {agent.budgetCap} SUI
@@ -417,17 +457,55 @@ export function TopUpDialog({ open, onClose }: { open: boolean; onClose: () => v
         <Field label="Amount (SUI)">
           <input
             type="number"
+            min="0.1"
+            step="0.1"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
             className="h-11 w-full rounded-md border border-border bg-surface-container px-3.5 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
         </Field>
+
+        {topUpState === "signing" && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Signing transaction…
+          </div>
+        )}
+
+        {topUpState === "done" && (
+          <div className="rounded-md border border-success/40 bg-success/10 p-3 text-xs text-success">
+            <p className="font-semibold">Top-up submitted</p>
+            {txDigest && (
+              <a href={`https://suiscan.xyz/testnet/tx/${txDigest}`} target="_blank" className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
+                View transaction <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {topUpState === "error" && (
+          <div className="rounded-md border border-danger/40 bg-danger/10 p-3 text-xs text-danger">
+            {txError}
+          </div>
+        )}
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-border bg-surface-container/50 px-6 py-4">
-        <button onClick={onClose} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-        <button onClick={onClose} className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
-          Sign & Top Up
+        <button onClick={onClose} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+          {topUpState === "done" ? "Close" : "Cancel"}
         </button>
+        {topUpState !== "done" && (
+          <button
+            onClick={handleTopUp}
+            disabled={!walletAccount || !agent || topUpState === "signing"}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
+          >
+            {topUpState === "signing" ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Signing…</>
+            ) : (
+              <><ArrowRight className="h-4 w-4" /> Sign & Top Up</>
+            )}
+          </button>
+        )}
       </div>
     </Shell>
   );

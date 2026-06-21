@@ -1,6 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { ServiceDefinition } from '../ServiceDefinition.js';
-import { createSuiClient, deepBookPackageId } from '../../../config.js';
+import { createSuiClient, deepBookPackageId, deepBookIndexerUrl } from '../../../config.js';
 
 const client = createSuiClient();
 
@@ -11,9 +11,16 @@ export const deepBookService: ServiceDefinition = {
   category: 'defi',
   requiresAuth: true,
   requiresFunds: true,
-  methods: ['getPoolInfo', 'getOrderBook', 'estimateSwap', 'buildSwapTx'],
+  methods: ['getPoolInfo', 'getOrderBook', 'estimateSwap', 'buildSwapTx', 'getPools'],
   async execute(method, params, _context) {
     switch (method) {
+      case 'getPools': {
+        const indexerUrl = deepBookIndexerUrl();
+        const res = await fetch(`${indexerUrl}/get_pools`);
+        if (!res.ok) throw new Error(`DeepBook indexer returned ${res.status}`);
+        const pools = await res.json();
+        return { pools, network: process.env.SUI_NETWORK || 'testnet', indexer: indexerUrl };
+      }
       case 'getPoolInfo': {
         const { poolId } = params;
         const result = await client.getObject({

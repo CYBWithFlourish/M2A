@@ -1,47 +1,41 @@
-module m2a::governance {
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::TxContext;
-    use std::string::String;
+module m2a::governance;
 
-    use m2a::m2a;
-    use m2a::policy::{Self as policy, AgentPolicy};
+use sui::tx_context::TxContext;
+use std::string::String;
 
-    /// Governance capability shared object for access control.
-    public struct GovernanceCap has key, store {
-        id: UID,
-    }
+use m2a::m2a;
+use m2a::policy::{Self as policy, AgentPolicy};
 
-    fun init(ctx: &mut TxContext) {
-        transfer::share_object(GovernanceCap {
-            id: object::new(ctx),
-        });
-    }
+/// Only the policy owner can call governance functions.
 
-    public fun freeze_agent(
-        _cap: &GovernanceCap,
-        policy: &mut AgentPolicy,
-        _ctx: &mut TxContext,
-    ) {
-        let agent_id = policy::agent_id(policy);
-        policy::deactivate(policy);
-        m2a::emit_agent_frozen(agent_id);
-    }
+const ENotPolicyOwner: u64 = 0;
 
-    public fun update_policy(
-        _cap: &GovernanceCap,
-        policy: &mut AgentPolicy,
-        policy_version: u64,
-        new_budget_cap: u64,
-        new_expiry_epoch: u64,
-        new_protocols: vector<String>,
-        new_tools: vector<String>,
-    ) {
-        let agent_id = policy::agent_id(policy);
-        policy::set_budget_cap(policy, new_budget_cap);
-        policy::set_expiry_epoch(policy, new_expiry_epoch);
-        policy::set_protocol_whitelist(policy, new_protocols);
-        policy::set_tool_whitelist(policy, new_tools);
-        m2a::emit_policy_updated(agent_id, policy_version);
-    }
+/// Deactivate (freeze) an agent. Only the policy owner may call this.
+entry fun freeze_agent(
+    policy: &mut AgentPolicy,
+    ctx: &TxContext,
+) {
+    assert!(policy.is_owner(ctx.sender()), ENotPolicyOwner);
+    let agent_id = policy::agent_id(policy);
+    policy::deactivate(policy);
+    m2a::emit_agent_frozen(agent_id);
+}
+
+/// Update policy fields. Only the policy owner may call this.
+entry fun update_policy(
+    policy: &mut AgentPolicy,
+    policy_version: u64,
+    new_budget_cap: u64,
+    new_expiry_epoch: u64,
+    new_protocols: vector<String>,
+    new_tools: vector<String>,
+    ctx: &TxContext,
+) {
+    assert!(policy.is_owner(ctx.sender()), ENotPolicyOwner);
+    let agent_id = policy::agent_id(policy);
+    policy::set_budget_cap(policy, new_budget_cap);
+    policy::set_expiry_epoch(policy, new_expiry_epoch);
+    policy::set_protocol_whitelist(policy, new_protocols);
+    policy::set_tool_whitelist(policy, new_tools);
+    m2a::emit_policy_updated(agent_id, policy_version);
 }

@@ -111,7 +111,10 @@ export class AgentRunner {
     const context = await this.memoryRouter.hydrateContext(node.memory_tier, userInput, userContext);
     const modelName = node.model || (node.data as any)?.model || 'llama-3.3-70b-versatile';
     const role = node.role || (node.data as any)?.role || (node.data as any)?.directives || 'You are a helpful assistant.';
-    const tools = node.tools || (node.data as any)?.tools || [];
+    let tools = node.tools || (node.data as any)?.tools || [];
+    if (tools.length === 0) {
+      tools = toolRegistry.getAllTools().map(t => t.name);
+    }
     const nodeData: any = node.data || {};
     const provider = providers.resolveProviderForModel(modelName);
 

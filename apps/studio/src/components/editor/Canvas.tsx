@@ -7,6 +7,13 @@ import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { Toolbar } from "./Toolbar";
 import { StickyNote } from "./StickyNote";
 import { NodeCard } from "./NodeCard";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 
 const NODE_W = 220;
 const NODE_H = 84;
@@ -107,6 +114,10 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
         e.preventDefault();
         const src = clipboard.current;
         addNodeOfType(src.type, src.x + 40, src.y + 40);
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault();
+        dispatch({ type: "remove_node", id: selectedId });
       }
       if (e.key === '?' && !meta) {
         e.preventDefault();
@@ -262,6 +273,13 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
             onStartConnect={() => startConnect(n.id)}
             onFinishConnect={() => finishConnect(n.id)}
             onDelete={() => dispatch({ type: "remove_node", id: n.id })}
+            onCopy={() => {
+              const node = nodes.find(x => x.id === n.id);
+              if (node) clipboard.current = { ...node };
+            }}
+            onPaste={() => {
+              if (clipboard.current) addNodeOfType(clipboard.current.type, n.x + 40, n.y + 40);
+            }}
           />
         ))}
 
@@ -304,6 +322,8 @@ function NodeView({
   onStartConnect,
   onFinishConnect,
   onDelete,
+  onCopy,
+  onPaste,
 }: {
   node: CanvasNode;
   selected: boolean;
@@ -312,18 +332,22 @@ function NodeView({
   onStartConnect: () => void;
   onFinishConnect: () => void;
   onDelete: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
 }) {
-  const { runChain } = useWorkflow();
+  const { runChain, dispatch } = useWorkflow();
   const isConnecting = pendingFrom && pendingFrom !== node.id;
   const isInRun = !runChain || runChain.executedNodes.includes(node.id);
 
   return (
-    <div
-      style={{ left: node.x, top: node.y, width: NODE_W, opacity: isInRun ? 1 : 0.2 }}
-      onPointerDown={onPointerDown}
-      className="absolute select-none"
-    >
-      <NodeCard node={node} selected={selected} onDelete={onDelete} />
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          style={{ left: node.x, top: node.y, width: NODE_W, opacity: isInRun ? 1 : 0.2 }}
+          onPointerDown={onPointerDown}
+          className="absolute select-none"
+        >
+          <NodeCard node={node} selected={selected} onDelete={onDelete} />
       <button
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -342,7 +366,21 @@ function NodeView({
         className="absolute -right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-card bg-primary transition hover:scale-110"
         title="Output"
       />
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="z-50 min-w-32">
+        <ContextMenuItem onSelect={() => onCopy()}>
+          Copy
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => onPaste()}>
+          Paste
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={() => onDelete()} className="text-destructive">
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 

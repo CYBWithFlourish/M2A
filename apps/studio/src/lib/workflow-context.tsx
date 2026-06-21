@@ -29,6 +29,7 @@ export type Agent = {
   budgetUsed: number;
   budgetCap: number;
   address: string;
+  onChainId?: string;
 };
 
 export type StickyNoteData = {
@@ -68,6 +69,7 @@ type Action =
   | { type: "clear_logs" }
   | { type: "set_running"; running: boolean }
   | { type: "add_agent"; agent: Agent }
+  | { type: "set_agents"; agents: Agent[] }
   | { type: "select_agent"; id: string | null }
   | { type: "load_template"; nodes: CanvasNode[]; connections: Connection[]; name: string }
   | { type: "set_workflow_id"; id: string | null }
@@ -153,6 +155,16 @@ function reducer(state: State, action: Action): State {
       return { ...state, running: action.running };
     case "add_agent":
       return { ...state, agents: [...state.agents, action.agent], selectedAgentId: action.agent.id };
+    case "set_agents":
+      return {
+        ...state,
+        agents: action.agents,
+        selectedAgentId: state.selectedAgentId && action.agents.some((a) => a.id === state.selectedAgentId)
+          ? state.selectedAgentId
+          : action.agents.length > 0
+            ? action.agents[0].id
+            : null,
+      };
     case "select_agent":
       return { ...state, selectedAgentId: action.id };
     case "load_template": {
@@ -220,25 +232,34 @@ const WorkflowCtx = createContext<Ctx | null>(null);
 export function WorkflowProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const counter = useRef(0);
+  const cancelRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    api.listAgents()
-      .then((agents: any[]) => {
-        for (const a of agents) {
-          if (isAgent(a)) {
-            dispatch({ type: "add_agent", agent: a });
-          } else {
-            const agent: Agent = {
+    const walletAddr = typeof window !== 'undefined' ? localStorage.getItem('wallet_address') : null;
+    Promise.all([
+      api.listAgents(),
+      walletAddr ? api.discoverAgents(walletAddr).then(r => r.agents || []).catch(() => []) : Promise.resolve([]),
+    ])
+      .then(([dbAgents, chainAgents]) => {
+        const seen = new Set<string>();
+        const all: Agent[] = [];
+        for (const list of [chainAgents, dbAgents]) {
+          for (const a of list) {
+            const key = a.id || a.on_chain_agent_id || a.wallet_address || a.address;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            all.push(isAgent(a) ? a : {
               id: a.id || `a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               name: a.name || "Agent",
               status: a.status === "active" ? "active" : "inactive",
               budgetUsed: a.budgetUsed ?? a.budget_used ?? 0,
               budgetCap: a.budgetCap ?? a.budget_cap ?? 0,
-              address: a.address || "",
-            };
-            dispatch({ type: "add_agent", agent });
+              address: a.address || a.wallet_address || "",
+              onChainId: a.onChainId ?? a.on_chain_agent_id ?? undefined,
+            });
           }
         }
+        dispatch({ type: "set_agents", agents: all });
       })
       .catch(() => {});
   }, []);
@@ -275,6 +296,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       })),
     };
 
+    const selectedAgentId = state.selectedAgentId;
     cancelRef.current = api.streamExecute(workflow, "Start the mission.", (event) => {
       const ts = () => new Date().toTimeString().slice(0, 8);
       switch (event.type) {
@@ -286,6 +308,17 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
           dispatch({ type: "set_status", id: event.nodeId!, status: "success" });
           dispatch({ type: "log", entry: { id: `l_${Date.now()}`, level: "llm", message: event.output?.slice(0, 200) || "", ts: ts(), nodeId: event.nodeId! } });
           dispatch({ type: "set_node_output", id: event.nodeId!, output: event.output || "" });
+
+          // Auto-sign txBytes if present (for agent zkLogin flows)
+          if (event.metadata?.txBytes) {
+            api.signAndSubmitTx(event.metadata.txBytes as string, selectedAgentId ?? undefined).then((res) => {
+              if (res.digest) {
+                dispatch({ type: "log", entry: { id: `l_${Date.now()}`, level: "success", message: `✅ Tx submitted: ${res.digest.slice(0, 16)}...`, ts: ts(), nodeId: event.nodeId! } });
+              } else if (res.error) {
+                dispatch({ type: "log", entry: { id: `l_${Date.now()}`, level: "error", message: `Tx sign failed: ${res.error}`, ts: ts(), nodeId: event.nodeId! } });
+              }
+            });
+          }
           break;
         case "node:error":
           dispatch({ type: "set_status", id: event.nodeId!, status: "error" });
@@ -299,8 +332,8 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
           notify.success('Workflow completed');
           break;
       }
-    });
-  }, [state.nodes, state.connections, state.running, state.workflowId, state.workflowName]);
+    }, selectedAgentId ?? undefined);
+  }, [state.nodes, state.connections, state.running, state.workflowId, state.workflowName, state.selectedAgentId]);
 
   const stopWorkflow = useCallback(() => {
     if (cancelRef.current) {

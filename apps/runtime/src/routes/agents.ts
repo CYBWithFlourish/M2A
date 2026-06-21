@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import crypto from 'crypto';
-import { createSuiClient } from '../config.js';
+import { createSuiClient, resolveNetworkVar, suiRpcUrl } from '../config.js';
+import { SuiReader } from '../m2a/suiClient.js';
 import { fromBase64 } from '@mysten/sui/utils';
 
 export const router = Router();
@@ -104,7 +105,7 @@ router.post('/', async (req, res) => {
       id: result.rows[0].id,
       name: result.rows[0].name,
       status: 'active',
-      budgetUsed: 0,
+      budgetUsed: Number(result.rows[0].budget_used || 0),
       budgetCap: result.rows[0].budget_cap,
       address: result.rows[0].wallet_address,
       onChainId: result.rows[0].on_chain_agent_id,
@@ -164,17 +165,105 @@ router.get('/:id/activity', async (req, res) => {
   }
 });
 
-// POST /api/v1/agents/:id/top-up — record a top-up (just accounting)
+// GET /api/v1/agents/:id/balance — fetch on-chain SUI balance
+router.get('/:id/balance', async (req, res) => {
+  try {
+    const result = await db.query('SELECT wallet_address FROM agents WHERE id = $1', [req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Agent not found' });
+    const walletAddress = result.rows[0].wallet_address;
+    const suiClient = createSuiClient();
+    const balance: any = await suiClient.getBalance({ owner: walletAddress });
+    res.json({
+      walletAddress,
+      totalBalance: balance.totalBalance ?? '0',
+      coins: balance.coins || [],
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/v1/agents/:id/top-up — relay signed SUI transfer to agent wallet
 router.post('/:id/top-up', async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { txBytes, signatures, amount } = req.body;
+    if (!txBytes) return res.status(400).json({ error: 'txBytes is required' });
     if (!amount) return res.status(400).json({ error: 'amount is required' });
+
+    const suiClient = createSuiClient();
+    const txBytesBytes = fromBase64(txBytes);
+
+    const response = await suiClient.executeTransaction({
+      transaction: txBytesBytes,
+      signatures: signatures || [],
+      include: { effects: true },
+    });
+
+    if (response.$kind !== 'Transaction') {
+      return res.status(500).json({ error: 'Transaction failed', details: response.FailedTransaction });
+    }
+
+    const txDigest = response.Transaction.digest;
+
     const result = await db.query(
       'UPDATE agents SET budget_cap = budget_cap + $1 WHERE id = $2 RETURNING *',
       [amount, req.params.id],
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Agent not found' });
-    res.json(result.rows[0]);
+
+    res.json({
+      ...result.rows[0],
+      txDigest,
+      budgetCap: result.rows[0].budget_cap,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/v1/agents/discover/:ownerAddress — discover agents from on-chain registry
+router.get('/discover/:ownerAddress', async (req, res) => {
+  try {
+    const { ownerAddress } = req.params;
+    const packageId = resolveNetworkVar('M2A_PACKAGE_ID');
+    const registryId = resolveNetworkVar('M2A_REGISTRY_ID');
+    if (!packageId || !registryId) {
+      return res.json({ agents: [], note: 'M2A contracts not configured' });
+    }
+
+    const reader = new SuiReader({ packageId });
+    const policies = await reader.getOwnerAgents(registryId, ownerAddress);
+
+    const agents = [];
+    for (const policy of policies) {
+      const existing = await db.query(
+        'SELECT * FROM agents WHERE wallet_address = $1 OR on_chain_agent_id = $2',
+        [policy.agentWallet, policy.id],
+      );
+      if (existing.rows.length > 0) {
+        agents.push(existing.rows[0]);
+      } else {
+        const agentId = crypto.randomUUID();
+        const newAgent = await db.query(
+          `INSERT INTO agents (id, name, wallet_address, owner_address, budget_cap, protocols, tools, on_chain_agent_id, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+           RETURNING *`,
+          [
+            agentId,
+            `Agent ${policy.agentWallet.slice(0, 6)}`,
+            policy.agentWallet,
+            policy.owner,
+            Number(policy.budgetCap),
+            JSON.stringify(policy.protocolWhitelist),
+            JSON.stringify(policy.toolWhitelist),
+            policy.id,
+          ],
+        );
+        agents.push(newAgent.rows[0]);
+      }
+    }
+
+    res.json({ agents });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

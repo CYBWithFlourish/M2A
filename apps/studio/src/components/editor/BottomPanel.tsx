@@ -122,35 +122,46 @@ function ResultsTab({ nodes }: { nodes: ReturnType<typeof useWorkflow>["nodes"] 
 }
 
 function DatasetsTab() {
+  const { selectedAgentId, agents } = useWorkflow();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const agent = agents.find(a => a.id === selectedAgentId);
 
   useEffect(() => {
     setLoading(true);
-    api.getDatasetStats()
+    const ns = agent ? `private::${agent.id}` : undefined;
+    const url = ns ? `/api/v1/datasets?namespace=${encodeURIComponent(ns)}` : '/api/v1/datasets';
+    fetch(url, { headers: { 'x-user-address': (agent as any)?.wallet_address || '' } })
+      .then(r => r.json())
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedAgentId]);
 
   if (loading) return <Loading />;
   if (!data || !data.datasets || data.datasets.length === 0) {
-    return <Empty>No datasets found.</Empty>;
+    return <Empty>No datasets found for this agent. Run a workflow to generate them.</Empty>;
   }
   return (
     <div className="space-y-2">
-      <div className="mb-2 grid grid-cols-3 gap-2">
-        <StatBox label="Total Interactions" value={data.totalInteractions ?? "—"} />
-        <StatBox label="Claim Count" value={data.claimCount ?? "—"} />
-        <StatBox label="Privacy Score" value={data.privacyScore ? `${data.privacyScore}/100` : "—"} />
-      </div>
       {data.datasets.map((ds: any, i: number) => (
-        <div key={i} className="flex items-center justify-between rounded-md border border-border bg-surface-container px-3 py-2 text-xs">
-          <span className="font-semibold">{ds.category || ds.name || `Dataset ${i + 1}`}</span>
-          <span className="text-muted-foreground">
-            {ds.claimCount ?? ds.size ?? 0} claims
-            {ds.privacyScore != null && <span className="ml-2 text-success">{ds.privacyScore}/100</span>}
-          </span>
+        <div key={ds.id || i} className="flex items-center justify-between rounded-md border border-border bg-surface-container px-3 py-2 text-xs">
+          <div>
+            <span className="font-semibold capitalize">{ds.category || 'dataset'}</span>
+            <span className="ml-2 text-muted-foreground">{ds.claim_count ?? 0} claims · {ds.sample_size ?? 0} samples</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {ds.privacy_score != null && (
+              <span className={`rounded px-1 py-0.5 text-[9px] font-bold ${ds.privacy_score >= 70 ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>
+                {ds.privacy_score}/100
+              </span>
+            )}
+            {ds.walrus_blob_id && (
+              <a href={`https://suiscan.xyz/testnet/object/${ds.walrus_blob_id}`} target="_blank" className="text-primary hover:underline" rel="noreferrer">
+                View
+              </a>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -203,19 +214,21 @@ function ActivityTab({ active }: { active: boolean }) {
 }
 
 function HistoryTab() {
-  const { dispatch } = useWorkflow();
+  const { dispatch, selectedAgentId, agents } = useWorkflow();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const agent = agents.find(a => a.id === selectedAgentId);
 
   const load = () => {
     setLoading(true);
-    api.listExecutionHistory()
+    const ns = agent ? `private::${agent.id}` : undefined;
+    api.listExecutionHistory(ns)
       .then((data) => setItems(data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [selectedAgentId]);
 
   if (loading) return <Loading />;
   if (items.length === 0) {

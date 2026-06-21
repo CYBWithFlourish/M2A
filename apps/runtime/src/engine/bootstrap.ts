@@ -25,7 +25,9 @@ import { suiTxService } from './services/sui/SuiTxService.js';
 import { suiQueryService } from './services/sui/SuiQueryService.js';
 import { deepBookService } from './services/defi/DeepBookService.js';
 import { cetusService } from './services/defi/CetusService.js';
-
+import { aftermathService } from './services/defi/AftermathService.js';
+import { naviService } from './services/defi/NaviService.js';
+import { suilendService } from './services/defi/SuilendService.js';
 
 import { integrationRegistry } from './integrations/IntegrationRegistry.js';
 import { registerAllSkillsAsTools } from './tools/SkillTools.js';
@@ -65,6 +67,9 @@ export function bootstrapEngine() {
   serviceRegistry.register(suiQueryService);
   serviceRegistry.register(deepBookService);
   serviceRegistry.register(cetusService);
+  serviceRegistry.register(aftermathService);
+  serviceRegistry.register(naviService);
+  serviceRegistry.register(suilendService);
 
   console.log(`✅ Registered ${serviceRegistry.getAll().length} services`);
 

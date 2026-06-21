@@ -111,6 +111,9 @@ export async function initDb() {
     await client.query(`
       ALTER TABLE agents ADD COLUMN IF NOT EXISTS tx_digest TEXT NOT NULL DEFAULT '';
     `);
+    await client.query(`
+      ALTER TABLE agents ADD COLUMN IF NOT EXISTS budget_used BIGINT NOT NULL DEFAULT 0;
+    `);
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_agents_owner ON agents (owner_address);
@@ -181,6 +184,33 @@ export async function initDb() {
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_exec_history_started ON execution_history (started_at DESC);
+    `);
+
+    await client.query(`
+      ALTER TABLE execution_history ADD COLUMN IF NOT EXISTS namespace TEXT NOT NULL DEFAULT '';
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_exec_history_namespace ON execution_history (namespace);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS datasets (
+        id TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL DEFAULT '',
+        claim_count INTEGER NOT NULL DEFAULT 0,
+        sample_size INTEGER NOT NULL DEFAULT 0,
+        source_domain TEXT NOT NULL DEFAULT '',
+        privacy_score REAL NOT NULL DEFAULT 0,
+        walrus_blob_id TEXT NOT NULL DEFAULT '',
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_datasets_namespace ON datasets (namespace);
     `);
 
     console.log('✅ Postgres: all tables verified/created');

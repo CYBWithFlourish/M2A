@@ -97,7 +97,6 @@ export const NODE_CATALOG: NodeDef[] = [
       ], defaultValue: "llama-3.3-70b-versatile" },
       { key: "temperature", label: "Temperature", type: "number", placeholder: "0.7" },
       { key: "maxTokens", label: "Max Tokens", type: "number", placeholder: "2048" },
-      { key: "agentId", label: "Linked Agent", type: "select", options: [] },
     ],
   },
   {
@@ -322,6 +321,44 @@ export const NODE_CATALOG: NodeDef[] = [
     ],
   },
   {
+    type: "cetus_trade",
+    label: "Cetus Trade",
+    description: "Swap tokens on Cetus CLMM DEX",
+    category: "DeFi",
+    badge: "DeFi",
+    color: "#06b6d4",
+    icon: Coins,
+    fields: [
+      { key: "action", label: "Action", type: "select", options: [
+        { value: "get_pool_info", label: "Pool Info" },
+        { value: "estimate_swap", label: "Estimate Swap" },
+        { value: "swap", label: "Swap (Simulate)" },
+      ], defaultValue: "swap" },
+      { key: "poolId", label: "Pool ID", type: "text", placeholder: "0x..." },
+      { key: "coinIn", label: "Coin In", type: "text", placeholder: "0x2::sui::SUI" },
+      { key: "coinOut", label: "Coin Out", type: "text", placeholder: "0x...::usdc::USDC" },
+      { key: "amount", label: "Amount", type: "text", placeholder: "1.0" },
+      { key: "slippage", label: "Slippage %", type: "number", placeholder: "0.5" },
+    ],
+  },
+  {
+    type: "cetus_lend",
+    label: "Cetus Lend",
+    description: "Lending operations on Cetus",
+    category: "DeFi",
+    badge: "DeFi",
+    color: "#10b981",
+    icon: Briefcase,
+    fields: [
+      { key: "action", label: "Action", type: "select", options: [
+        { value: "supply", label: "Supply" },
+        { value: "withdraw", label: "Withdraw" },
+      ], defaultValue: "supply" },
+      { key: "asset", label: "Asset", type: "text", placeholder: "SUI" },
+      { key: "amount", label: "Amount", type: "text", placeholder: "1.0" },
+    ],
+  },
+  {
     type: "price_alert", label: "Price Alert", description: "Threshold price monitor", category: "DeFi", badge: "DeFi", color: "#f59e0b", icon: Bell,
     fields: [
       { key: "asset", label: "Asset", type: "text", placeholder: "SUI" },
@@ -342,9 +379,14 @@ export const NODE_CATALOG: NodeDef[] = [
     icon: TrendingUp,
     fields: [
       { key: "action", label: "Action", type: "select", options: [
-        { value: "swap", label: "Swap" },
+        { value: "get_pools", label: "List Available Pools" },
+        { value: "swap", label: "Swap (Simulate)" },
+        { value: "swap_and_submit", label: "Swap & Submit (Live)" },
         { value: "limit_order", label: "Limit Order" },
         { value: "cancel", label: "Cancel Order" },
+        { value: "get_pool_info", label: "Pool Info" },
+        { value: "get_order_book", label: "Order Book" },
+        { value: "estimate_swap", label: "Estimate Swap" },
       ], defaultValue: "swap" },
       { key: "pool", label: "Pool ID", type: "text", placeholder: "0x..." },
       { key: "amount", label: "Amount (SUI)", type: "number", placeholder: "10" },

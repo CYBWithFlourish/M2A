@@ -11,6 +11,7 @@ interface StreamEvent {
   output?: string;
   error?: string;
   status?: string;
+  metadata?: Record<string, unknown>;
   timestamp?: number;
 }
 
@@ -90,12 +91,13 @@ export const api = {
     workflow: WorkflowDefinition,
     input: string,
     onEvent: (event: StreamEvent) => void,
+    agentId?: string,
   ): () => void {
     const controller = new AbortController();
     fetch(`${BASE}/execute/raw/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ workflow, input }),
+      body: JSON.stringify({ workflow, input, agentId }),
       signal: controller.signal,
     }).then(async (response) => {
       const reader = response.body?.getReader();
@@ -118,6 +120,34 @@ export const api = {
       }
     }).catch(() => {});
     return () => controller.abort();
+  },
+
+  async signAndSubmitTx(txBytes: string, agentId?: string): Promise<any> {
+    const saved = localStorage.getItem('zklogin_user');
+    if (!saved) return { error: 'No zkLogin session. Connect agent wallet first.' };
+    const session = JSON.parse(saved);
+    const secretKey = session.secretKey;
+    if (!secretKey) return { error: 'No secret key in session' };
+
+    const { fromHex } = await import('@mysten/sui/utils');
+    const bytes = typeof txBytes === 'string' && txBytes.startsWith('0x') ? fromHex(txBytes.slice(2)) : txBytes;
+
+    const res = await fetch(`${BASE}/execute/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({
+        txBytes: typeof bytes === 'string' ? bytes : Array.from(bytes),
+        agentWallet: { address: session.address },
+        secretKey,
+        proofPoints: session.proofPoints,
+        issBase64Details: session.issBase64Details,
+        headerBase64: session.headerBase64,
+        salt: session.salt,
+        maxEpoch: session.maxEpoch,
+        agentId,
+      }),
+    });
+    return res.json();
   },
 
   async executeWorkflowById(workflowId: string, input: string): Promise<any> {
@@ -156,6 +186,46 @@ export const api = {
     return res.json();
   },
 
+  async topUpAgent(id: string, data: any): Promise<any> {
+    const res = await fetch(`${BASE}/agents/${id}/top-up`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async discoverAgents(ownerAddress: string): Promise<any> {
+    const res = await fetch(`${BASE}/agents/discover/${encodeURIComponent(ownerAddress)}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  async deleteAgent(id: string): Promise<any> {
+    const res = await fetch(`${BASE}/agents/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  async getAgentBalance(id: string): Promise<any> {
+    const res = await fetch(`${BASE}/agents/${id}/balance`, {
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
+  async updateAgent(id: string, data: any): Promise<any> {
+    const res = await fetch(`${BASE}/agents/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   async deployWorkflow(id: string): Promise<any> {
     const res = await fetch(`${BASE}/workflows/${id}/deploy`, { method: 'POST', headers: getAuthHeaders() });
     return res.json();
@@ -171,8 +241,9 @@ export const api = {
     return res.json();
   },
 
-  async listExecutionHistory(): Promise<any[]> {
-    const res = await fetch(`${BASE}/execute/history`, { headers: getAuthHeaders() });
+  async listExecutionHistory(namespace?: string): Promise<any[]> {
+    const qs = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+    const res = await fetch(`${BASE}/execute/history${qs}`, { headers: getAuthHeaders() });
     return res.json();
   },
 

@@ -5,6 +5,7 @@ import { db } from '../db.js';
 import { authorizeM2AAction } from '../m2a/authz.js';
 import { Transaction } from '@mysten/sui/transactions';
 import { createSuiClient } from '../config.js';
+import { dpa } from '../engine/DataProcessingAgent.js';
 
 export const router = Router();
 
@@ -266,6 +267,24 @@ router.post('/raw/stream', async (req, res) => {
       return res.status(403).json({ error: workflowAuthz.reason || 'workflow execution denied' });
     }
 
+    // Inject per-agent private namespace into all agent nodes' memory config
+    if (agentRecord) {
+      workflow.nodes = workflow.nodes.map(node => {
+        if (node.type !== 'agent') return node;
+        const existing = (node as any).memory_tier || {};
+        const privateNs = `private::${agentRecord.id}`;
+        const sessionNs = `private::${agentRecord.id}::session::${Date.now()}`;
+        return {
+          ...node,
+          memory_tier: {
+            read: [...new Set([...existing.read || [], 'pool::default', privateNs])],
+            write: [...new Set([...existing.write || [], privateNs, sessionNs])],
+            tier: existing.tier || 'hot',
+          },
+        };
+      });
+    }
+
     await db.saveWorkflow(workflow);
 
     console.log(`[Engine] Triggering SSE streaming execution for: ${workflow.name}`);
@@ -297,9 +316,16 @@ router.post('/raw/stream', async (req, res) => {
       };
     }
 
+    const runId = `run_${Date.now()}`;
+    const startTime = Date.now();
+    const nodeResults: any[] = [];
+
     req.on('close', () => {
       console.log('[SSE] Client disconnected');
     });
+
+    let finalStatus = 'completed';
+    let errorMsg: string | null = null;
 
     try {
       await workflowParser.execute(
@@ -307,11 +333,63 @@ router.post('/raw/stream', async (req, res) => {
         initialInput,
         userContext as any,
         (event) => {
+          if (event.type === 'node:complete') nodeResults.push(event);
+          if (event.type === 'workflow:complete' && event.status === 'failed') finalStatus = 'failed';
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         }
       );
     } catch (e: any) {
+      errorMsg = e.message;
+      finalStatus = 'failed';
       res.write(`data: ${JSON.stringify({ type: 'workflow:complete', status: 'failed', results: {}, timestamp: Date.now() })}\n\n`);
+    }
+
+    try {
+      const execNamespace = agentRecord ? `private::${agentRecord.id}` : '';
+      await db.query(
+        `INSERT INTO execution_history (id, workflow_id, workflow_name, status, node_results, started_at, completed_at, inputs, outputs, run_duration_ms, error_message, namespace)
+         VALUES ($1, $2, $3, $4, $5, to_timestamp($6::double precision / 1000), to_timestamp($7::double precision / 1000), $8, $9, $10, $11, $12)`,
+        [
+          runId,
+          workflow.id || workflow.name,
+          workflow.name,
+          finalStatus,
+          JSON.stringify(nodeResults),
+          startTime,
+          Date.now(),
+          JSON.stringify({ input: initialInput }),
+          JSON.stringify({}),
+          Date.now() - startTime,
+          errorMsg,
+          execNamespace,
+        ]
+      );
+    } catch (dbErr) {
+      console.error('[Execute] Failed to save execution history:', dbErr);
+    }
+
+    // Auto-generate verified datasets from MemWal interactions for this agent
+    if (finalStatus === 'completed' && agentRecord) {
+      dpa.categorizeAndStore().then(results => {
+        const namespace = `private::${agentRecord.id}`;
+        for (const r of results) {
+          db.query(
+            `INSERT INTO datasets (id, namespace, category, claim_count, sample_size, source_domain, privacy_score, walrus_blob_id, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,
+            [
+              `dataset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+              namespace,
+              r.category,
+              0,
+              0,
+              'agent_execution',
+              0,
+              r.blobId,
+              JSON.stringify({ agentId: agentRecord.id, workflowName: workflow.name, runId }),
+            ]
+          ).catch(e => console.error('[Execute] Failed to save dataset:', e));
+        }
+      }).catch(e => console.error('[Execute] Auto-dataset generation failed:', e));
     }
 
     res.end();
@@ -326,9 +404,12 @@ router.post('/raw/stream', async (req, res) => {
 
 router.get('/history', async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT * FROM execution_history ORDER BY started_at DESC LIMIT 50'
-    );
+    const namespace = req.query.namespace as string;
+    const query = namespace
+      ? 'SELECT * FROM execution_history WHERE namespace = $1 ORDER BY started_at DESC LIMIT 50'
+      : 'SELECT * FROM execution_history ORDER BY started_at DESC LIMIT 50';
+    const params = namespace ? [namespace] : [];
+    const result = await db.query(query, params);
     res.json(result.rows);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -422,7 +503,7 @@ router.get('/history/:id/chain', async (req, res) => {
 
 router.post('/sign', async (req, res) => {
   try {
-    const { txBytes, agentWallet, secretKey, proofPoints, issBase64Details, headerBase64, salt, maxEpoch } = req.body;
+    const { txBytes, agentWallet, secretKey, proofPoints, issBase64Details, headerBase64, salt, maxEpoch, agentId } = req.body;
 
     if (!txBytes || !agentWallet || !secretKey) {
       return res.status(400).json({ error: 'txBytes, agentWallet, and secretKey are required' });
@@ -478,6 +559,26 @@ router.post('/sign', async (req, res) => {
     const txResult = result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
     if (result.$kind === 'Transaction') {
       await client.waitForTransaction({ digest: txResult.digest });
+    }
+
+    // Budget deduction: deduct gas cost from agent's budget
+    if (agentId && result.$kind === 'Transaction') {
+      const gasUsed = txResult.effects?.gasUsed;
+      if (gasUsed) {
+        const computationCost = BigInt(gasUsed.computationCost || 0);
+        const storageCost = BigInt(gasUsed.storageCost || 0);
+        const storageRebate = BigInt(gasUsed.storageRebate || 0);
+        const totalGas = computationCost + storageCost - storageRebate;
+        // Store the gas cost in the DB as budget used
+        try {
+          await db.query(
+            'UPDATE agents SET budget_used = budget_used + $1 WHERE id = $2',
+            [totalGas.toString(), agentId],
+          );
+        } catch (dbErr) {
+          console.warn(`[sign] budget deduction failed for agent ${agentId}:`, dbErr);
+        }
+      }
     }
 
     res.json({

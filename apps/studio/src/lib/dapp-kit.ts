@@ -13,3 +13,9 @@ export const dAppKit = createDAppKit({
     new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
   autoConnect: true,
 });
+
+declare module '@mysten/dapp-kit-react' {
+  interface Register {
+    dAppKit: typeof dAppKit;
+  }
+}

@@ -1,6 +1,8 @@
 const ZKL_SERVICE = "https://zklservicest3rdwl.up.railway.app";
 const ZKL_API_KEY = (import.meta as any).env?.VITE_ZKL_API_KEY || "";
 
+const isBrowser = typeof window !== "undefined";
+
 export async function startAgentZkLogin() {
   const { Ed25519Keypair } = await import("@mysten/sui/keypairs/ed25519");
   const { generateNonce, generateRandomness } = await import("@mysten/sui/zklogin");
@@ -12,20 +14,23 @@ export async function startAgentZkLogin() {
   const maxEpoch = Number(epoch) + 20;
   const nonce = generateNonce(keypair.getPublicKey(), maxEpoch, randomness);
 
-  localStorage.setItem(
-    "zklogin_ephemeral",
-    JSON.stringify({
-      secretKey: keypair.getSecretKey(),
-      randomness,
-      maxEpoch,
-    }),
-  );
+  if (isBrowser) {
+    localStorage.setItem(
+      "zklogin_ephemeral",
+      JSON.stringify({
+        secretKey: keypair.getSecretKey(),
+        randomness,
+        maxEpoch,
+      }),
+    );
 
-  const redirect = encodeURIComponent(`${window.location.origin}/zklogin-callback`);
-  window.location.href = `${ZKL_SERVICE}/auth/google?nonce=${encodeURIComponent(nonce)}&api_key=${ZKL_API_KEY}&redirect=${redirect}`;
+    const redirect = encodeURIComponent(`${window.location.origin}/zklogin-callback`);
+    window.location.href = `${ZKL_SERVICE}/auth/google?nonce=${encodeURIComponent(nonce)}&api_key=${ZKL_API_KEY}&redirect=${redirect}`;
+  }
 }
 
 export function getAgentWalletSession(): { address: string; secretKey: string } | null {
+  if (!isBrowser) return null;
   const saved = localStorage.getItem("zklogin_user");
   if (!saved) return null;
   try {
@@ -38,6 +43,7 @@ export function getAgentWalletSession(): { address: string; secretKey: string } 
 }
 
 export function clearAgentWalletSession() {
+  if (!isBrowser) return;
   localStorage.removeItem("zklogin_user");
   localStorage.removeItem("zklogin_ephemeral");
 }
