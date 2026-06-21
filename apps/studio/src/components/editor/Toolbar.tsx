@@ -1,4 +1,4 @@
-import { MousePointer, Hand, Play, Loader2 } from "lucide-react";
+import { MousePointer, Hand, Play, Loader2, Square } from "lucide-react";
 import { useWorkflow } from "@/lib/workflow-context";
 
 interface ToolbarProps {
@@ -13,7 +13,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ onAddComponent, onAddNote, view, onZoomIn, onZoomOut, onResetZoom, mode, onModeChange }: ToolbarProps) {
-  const { running, runWorkflow } = useWorkflow();
+  const { running, runWorkflow, stopWorkflow } = useWorkflow();
 
   return (
     <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-1 rounded-lg border border-border bg-surface-container/90 px-1.5 py-1 backdrop-blur">
@@ -34,9 +34,15 @@ export function Toolbar({ onAddComponent, onAddNote, view, onZoomIn, onZoomOut, 
         + Note
       </button>
       <div className="mx-0.5 h-4 w-px bg-border" />
-      <button onClick={runWorkflow} disabled={running} className="grid h-7 place-items-center rounded px-1.5 text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground transition bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50" title="Execute workflow">
-        {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-      </button>
+      {running ? (
+        <button onClick={stopWorkflow} className="grid h-7 place-items-center rounded px-1.5 text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground transition bg-danger/10 text-danger hover:bg-danger/20" title="Stop execution">
+          <Square className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <button onClick={runWorkflow} className="grid h-7 place-items-center rounded px-1.5 text-[10px] bg-primary/10 text-primary hover:bg-primary/20 transition" title="Execute workflow">
+          <Play className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }

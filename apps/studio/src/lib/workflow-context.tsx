@@ -210,6 +210,7 @@ type Ctx = State & {
   dispatch: React.Dispatch<Action>;
   addNodeOfType: (type: string, x?: number, y?: number) => void;
   runWorkflow: () => void;
+  stopWorkflow: () => void;
   saveWorkflow: () => Promise<void>;
   loadWorkflow: (id: string) => Promise<void>;
 };
@@ -274,7 +275,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       })),
     };
 
-    api.streamExecute(workflow, "Start the mission.", (event) => {
+    cancelRef.current = api.streamExecute(workflow, "Start the mission.", (event) => {
       const ts = () => new Date().toTimeString().slice(0, 8);
       switch (event.type) {
         case "node:start":
@@ -292,6 +293,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
           notify.error('Execution failed: ' + (event.error || 'Unknown error'));
           break;
         case "workflow:complete":
+          cancelRef.current = null;
           dispatch({ type: "set_running", running: false });
           dispatch({ type: "log", entry: { id: `l_${Date.now()}`, level: "success", message: "Workflow completed.", ts: ts() } });
           notify.success('Workflow completed');
@@ -299,6 +301,15 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
       }
     });
   }, [state.nodes, state.connections, state.running, state.workflowId, state.workflowName]);
+
+  const stopWorkflow = useCallback(() => {
+    if (cancelRef.current) {
+      cancelRef.current();
+      cancelRef.current = null;
+    }
+    dispatch({ type: "set_running", running: false });
+    notify.info('Execution stopped');
+  }, []);
 
   const saveWorkflow = useCallback(async () => {
     const workflow = {
@@ -345,7 +356,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "set_workflow_id", id });
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ ...state, dispatch, addNodeOfType, runWorkflow, saveWorkflow, loadWorkflow }), [state, addNodeOfType, runWorkflow, saveWorkflow, loadWorkflow]);
+  const value = useMemo<Ctx>(() => ({ ...state, dispatch, addNodeOfType, runWorkflow, stopWorkflow, saveWorkflow, loadWorkflow }), [state, addNodeOfType, runWorkflow, stopWorkflow, saveWorkflow, loadWorkflow]);
 
   return <WorkflowCtx.Provider value={value}>{children}</WorkflowCtx.Provider>;
 }
