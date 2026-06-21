@@ -5,11 +5,11 @@ export default function HeroSection() {
     <section className="relative overflow-hidden border-b border-border">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
       <div className="mx-auto max-w-[1400px] px-6 pt-32 pb-20 md:pt-40 md:pb-28 text-center relative z-10">
-        <h1 className="mt-6 text-display-lg md:text-[64px] md:leading-[68px] tracking-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[64px] lg:leading-[68px] font-bold tracking-tight">
           Build <span className="text-primary">Automations</span> on the Sui stack<br />and its protocols. <span className="text-primary">Every node remembers.</span><br />Every run generates <span className="text-primary">Verifiable data</span>.
         </h1>
 
-        <p className="mx-auto mt-6 max-w-2xl text-body-lg text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg text-muted-foreground">
           Visual workflow builder powered by Walrus and MemWal. Drag, connect, and compose Sui protocols: DeFi, bridges, oracles, NFTs. Every execution leaves a permanent, privacy-safe dataset you can verify on-chain.
         </p>
 
