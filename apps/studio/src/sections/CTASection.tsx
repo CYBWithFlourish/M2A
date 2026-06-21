@@ -27,10 +27,6 @@ export default function CTASection() {
               Read the Docs
             </a>
           </div>
-
-          <p className="mt-8 text-mono text-slate-600">
-            npm install buiry
-          </p>
         </div>
       </div>
     </section>
