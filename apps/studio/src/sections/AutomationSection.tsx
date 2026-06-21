@@ -1,17 +1,17 @@
 import { Link } from "@tanstack/react-router";
 
 const COMPARE_LEFT = [
-  "Stateless — every run starts from zero",
-  "Centralized — one server, one point of failure",
-  "No verification — you trust the platform's word",
-  "Off-chain only — no real connection to Web3",
+  "Stateless:every run starts from zero",
+  "Centralized:one server, one point of failure",
+  "No verification:you trust the platform's word",
+  "Off-chain only:no real connection to Web3",
 ];
 
 const COMPARE_RIGHT = [
-  "Persistent memory — every node remembers across runs",
-  "Built on Sui, Walrus, and MemWal — decentralized by default",
-  "Verifiable — every execution is a Sui transaction",
-  "Native protocol access — connect directly to the Sui stack",
+  "Persistent memory:every node remembers across runs",
+  "Built on Sui, Walrus, and MemWal:decentralized by default",
+  "Verifiable:every execution is a Sui transaction",
+  "Native protocol access:connect directly to the Sui stack",
 ];
 
 export default function AutomationSection() {
@@ -27,7 +27,7 @@ export default function AutomationSection() {
             <span className="text-primary">As easily as dragging a node.</span>
           </h2>
           <p className="mt-6 text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            M2A is the on-chain automation builder — connect AI agents, Sui protocols, and data sources visually, without writing a single line of Move or wrangling an SDK directly. If you've used n8n or Zapier, you already know how to use M2A. The difference is everything you build remembers, and everything that happens is verifiable on-chain.
+            M2A is the on-chain automation builder:connect AI agents, Sui protocols, and data sources visually, without writing a single line of Move or wrangling an SDK directly. You already know how to use M2A. The difference is everything you build remembers, and everything that happens is verifiable on-chain.
           </p>
         </div>
 
@@ -62,21 +62,21 @@ export default function AutomationSection() {
         <div className="grid md:grid-cols-3 gap-6 mb-16">
           <div className="text-center md:text-left">
             <span className="inline-block text-3xl font-bold text-primary mb-2">1</span>
-            <h3 className="text-lg font-bold text-white mb-2">Drag</h3>
+            <h3 className="text-lg font-bold text-black dark:text-white mb-2">Drag</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Drop a node onto the canvas — an AI agent, a Sui protocol connector, a trigger, a data source.
+              Drop a node onto the canvas:an AI agent, a Sui protocol connector, a trigger, a data source.
             </p>
           </div>
           <div className="text-center md:text-left">
             <span className="inline-block text-3xl font-bold text-primary mb-2">2</span>
-            <h3 className="text-lg font-bold text-white mb-2">Connect</h3>
+            <h3 className="text-lg font-bold text-black dark:text-white mb-2">Connect</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Draw a line between nodes. That's it — they now share memory and pass data automatically.
+              Draw a line between nodes. That's it:they now share memory and pass data automatically.
             </p>
           </div>
           <div className="text-center md:text-left">
             <span className="inline-block text-3xl font-bold text-primary mb-2">3</span>
-            <h3 className="text-lg font-bold text-white mb-2">Run</h3>
+            <h3 className="text-lg font-bold text-black dark:text-white mb-2">Run</h3>
             <p className="text-sm text-slate-400 leading-relaxed">
               Execute. Every action becomes a verifiable on-chain transaction. No manual wiring, no protocol-specific code.
             </p>
