@@ -13,36 +13,36 @@ const NODE_CATEGORIES = [
 
 export default function FeaturesSection() {
   return (
-    <section id="features" className="bg-surface-low overflow-hidden">
-      <div className="py-24 md:py-36">
-        <div className="text-center mb-16 px-6">
+    <section id="features" className="bg-surface-low">
+      <div className="mx-auto max-w-[1200px] px-6 py-24 md:py-36">
+        <div className="text-center mb-16">
           <h2 className="font-display text-3xl sm:text-4xl md:text-[42px] font-bold tracking-tight text-black dark:text-white leading-tight">
             <span className="text-primary">48</span> node types. One canvas.<br />
             Build any automation.
           </h2>
         </div>
 
-        <div className="flex gap-5 overflow-x-auto px-6 pb-4 snap-x snap-mandatory scrollbar-none -mx-6 px-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
           {NODE_CATEGORIES.map((cat) => (
             <div
               key={cat.label}
-              className="snap-start shrink-0 w-[300px] md:w-[340px] rounded-3xl p-8 flex flex-col justify-between min-h-[340px]"
+              className="rounded-3xl p-7 flex flex-col justify-between min-h-[260px]"
               style={{
-                background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, #111318 40%, rgba(139,92,246,0.04) 100%)',
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, #0f1117 40%, rgba(139,92,246,0.04) 100%)',
                 border: '1px solid rgba(139, 92, 246, 0.2)',
               }}
             >
               <div>
-                <h3 className="font-display text-3xl font-bold text-white mb-6">
+                <h3 className="font-display text-2xl font-bold text-white mb-4">
                   {cat.label}
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {cat.items.map((item) => (
                     <p key={item} className="text-sm text-slate-400">{item}</p>
                   ))}
                 </div>
               </div>
-              <div className="mt-6 flex items-center gap-2">
+              <div className="mt-4">
                 <span className="text-xs font-bold text-primary uppercase tracking-wider">
                   {cat.count} nodes
                 </span>
