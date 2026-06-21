@@ -6,7 +6,6 @@ const STATS = [
 ];
 
 const TECH = [
-  { category: 'Core', items: ['Sui Network'] },
   { category: 'Storage', items: ['Walrus', 'MemWal', 'SEAL'] },
   { category: 'AI', items: ['Groq', 'Llama 3'] },
   { category: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4'] },
