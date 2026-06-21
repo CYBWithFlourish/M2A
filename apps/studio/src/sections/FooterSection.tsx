@@ -15,7 +15,7 @@ const DEVELOPERS = [
 const COMPANY = [
   { label: 'M2A', href: '#' },
   { label: 'GPL v3 License', href: 'https://github.com/anomalyco/m2a' },
-  { label: 'Sui Overflow 2026', href: '#' },
+  { label: 'Built on Sui', href: '#' },
   { label: 'Contact', href: '#' },
 ];
 

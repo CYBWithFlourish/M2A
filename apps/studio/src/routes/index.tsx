@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
 import { LandingNavbar } from "@/components/landing-navbar";
 import HeroSection from "@/sections/HeroSection";
 import ProblemSection from "@/sections/ProblemSection";
@@ -23,16 +22,9 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
     <main className="min-h-screen bg-surface text-foreground">
-      <LandingNavbar scrolled={scrolled} />
+      <LandingNavbar />
       <HeroSection />
       <ProblemSection />
       <SolutionSection />

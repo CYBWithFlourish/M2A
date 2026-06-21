@@ -3,10 +3,6 @@ export default function HeroSection() {
     <section className="relative overflow-hidden border-b border-border">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
       <div className="mx-auto max-w-[1400px] px-6 pt-32 pb-20 md:pt-40 md:pb-28 text-center relative z-10">
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-3 py-1 text-label-bold text-primary">
-          Sui Overflow 2026
-        </span>
-
         <h1 className="mt-6 text-display-lg md:text-[64px] md:leading-[68px] tracking-tight">
           Your agents forget everything<br />
           between sessions. <span className="text-primary">M2A remembers.</span>

@@ -1,4 +1,6 @@
 import { Link } from '@tanstack/react-router';
+import { useTheme } from '@/lib/theme';
+import { Sun, Moon } from 'lucide-react';
 
 const NAV = [
   { label: 'Features', href: '#features' },
@@ -7,21 +9,14 @@ const NAV = [
   { label: 'GitHub', href: 'https://github.com/CYBWithFlourish/M2A' },
 ] as const;
 
-export function LandingNavbar({ scrolled }: { scrolled: boolean }) {
+export function LandingNavbar() {
+  const { theme, toggle } = useTheme();
+
   return (
-    <header
-      className={
-        'fixed top-0 z-40 w-full transition-all duration-300 ' +
-        (scrolled
-          ? 'border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80'
-          : 'bg-transparent')
-      }
-    >
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-6">
+    <header className="w-full border-b border-border bg-surface/95">
+      <div className="flex h-16 max-w-[1400px] items-center justify-between gap-4 px-6">
         <a href="#" className="flex items-center gap-2.5 shrink-0">
-          <span className="font-display text-xl font-bold tracking-tight text-white">
-            M2<span className="text-primary">A</span>
-          </span>
+          <img src="/M2ALightLogo.png" alt="M2A" className="h-8 w-auto" />
         </a>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -37,6 +32,9 @@ export function LandingNavbar({ scrolled }: { scrolled: boolean }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button onClick={toggle} className="grid h-9 w-9 place-items-center rounded-md text-slate-400 hover:text-white hover:bg-white/5">
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <Link
             to="/studio"
             className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold text-white transition-all hover:brightness-110 active:opacity-80"

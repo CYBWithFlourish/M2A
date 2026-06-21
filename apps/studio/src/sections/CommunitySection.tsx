@@ -3,12 +3,9 @@ export default function CommunitySection() {
     <section className="border-b border-border bg-surface-low">
       <div className="mx-auto max-w-[1400px] px-6 py-16 md:py-24">
         <div className="text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-3 py-1 text-label-bold text-primary">
-            Sui Overflow 2026
-          </span>
-          <h2 className="mt-6 text-headline-lg">Built for Sui Overflow 2026.</h2>
+          <h2 className="text-headline-lg">Built for the community.</h2>
           <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-            M2A was forged in the Sui Overflow 2026 hackathon — a full-stack attempt at fixing the hardest problem in AI: stateless agents.
+            M2A is open source — a full-stack attempt at fixing the hardest problem in AI: stateless agents.
           </p>
         </div>
 

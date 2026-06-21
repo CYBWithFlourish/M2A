@@ -91,6 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/M2ALightLogo.png" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -125,14 +126,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const walletAccount = useCurrentAccount();
-
-  useEffect(() => {
-    if (walletAccount?.address) {
-      localStorage.setItem('wallet_address', walletAccount.address);
-    }
-  }, [walletAccount]);
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
