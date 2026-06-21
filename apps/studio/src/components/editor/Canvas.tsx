@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Loader2, Check, X, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { getNodeDef } from "@/lib/nodes";
 import { useWorkflow, type CanvasNode } from "@/lib/workflow-context";
 import { ErrorBoundary } from "@/lib/error-boundary";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
+import { Toolbar } from "./Toolbar";
+import { StickyNote } from "./StickyNote";
+import { NodeCard } from "./NodeCard";
 
 const NODE_W = 220;
 const NODE_H = 84;
 
 export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
-  const { nodes, connections, selectedId, dispatch, addNodeOfType } = useWorkflow();
+  const { nodes, connections, selectedId, stickyNotes, runChain, dispatch, addNodeOfType } = useWorkflow();
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
   const [panning, setPanning] = useState(false);
+  const [mode, setMode] = useState<"select" | "pan">("select");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const panStart = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
   const [pendingFrom, setPendingFrom] = useState<string | null>(null);
@@ -35,6 +39,7 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
   const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     if (isDragging.current) return;
+    if (mode !== "pan") return;
     setPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
     (e.target as Element).setPointerCapture(e.pointerId);
@@ -154,6 +159,11 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
 
   const isEmpty = nodes.length === 0;
 
+  const addStickyNote = useCallback(() => {
+    const center = screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+    dispatch({ type: "add_sticky_note", note: { id: `note_${Date.now()}`, x: center.x, y: center.y, content: '' } });
+  }, [screenToCanvas, dispatch]);
+
   return (
     <ErrorBoundary>
     <div
@@ -167,36 +177,19 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
       onDrop={(e) => { isDragging.current = false; onDropNode(e); }}
       onDragLeave={() => { isDragging.current = false; }}
       className="canvas-grid relative flex-1 overflow-hidden bg-surface-dim"
-      style={{ cursor: panning ? "grabbing" : "default" }}
+      style={{ cursor: panning ? "grabbing" : mode === "pan" ? "grab" : "default" }}
     >
-      {/* zoom controls */}
-      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-1 rounded-md border border-border bg-surface-container/80 px-1 py-0.5 backdrop-blur">
-        <button
-          onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k + 0.1) }))}
-          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
-          title="Zoom in"
-        >+</button>
-        <span className="w-10 text-center font-mono text-[10px] text-muted-foreground">{(view.k * 100).toFixed(0)}%</span>
-        <button
-          onClick={() => setView(v => ({ ...v, k: Math.max(0.4, v.k - 0.1) }))}
-          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
-          title="Zoom out"
-        >−</button>
-        <button
-          onClick={() => setView({ x: 0, y: 0, k: 1 })}
-          className="grid h-6 w-6 place-items-center rounded text-[10px] text-muted-foreground hover:bg-surface-container-hover hover:text-foreground"
-          title="Reset zoom"
-        >⟲</button>
-      </div>
-
-      {/* Cmd+K hint */}
-      <button
-        onClick={onOpenPalette}
-        className="absolute bottom-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-container/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur hover:text-foreground"
-      >
-        <kbd className="rounded bg-surface-high px-1 font-mono text-[10px]">⌘K</kbd>
-        Add nodes
-      </button>
+      {/* Toolbar */}
+      <Toolbar
+        onAddComponent={onOpenPalette}
+        onAddNote={addStickyNote}
+        view={view}
+        onZoomIn={() => setView(v => ({ ...v, k: Math.min(2, v.k + 0.1) }))}
+        onZoomOut={() => setView(v => ({ ...v, k: Math.max(0.4, v.k - 0.1) }))}
+        onResetZoom={() => setView({ x: 0, y: 0, k: 1 })}
+        mode={mode}
+        onModeChange={setMode}
+      />
 
       {/* minimap */}
       {!isEmpty && nodes.length > 0 && (() => {
@@ -248,7 +241,8 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
             const y1 = from.y + NODE_H / 2;
             const x2 = to.x;
             const y2 = to.y + NODE_H / 2;
-            return <Wire key={c.id} x1={x1} y1={y1} x2={x2} y2={y2} animated={from.status === "running" || from.status === "success"} />;
+            const isEdgeInRun = !runChain || runChain.traversedEdges.includes(c.id);
+            return <Wire key={c.id} x1={x1} y1={y1} x2={x2} y2={y2} animated={from.status === "running" || from.status === "success"} opacity={isEdgeInRun ? 1 : 0.2} />;
           })}
           {pendingFrom && cursor && (() => {
             const from = nodes.find((n) => n.id === pendingFrom);
@@ -269,6 +263,12 @@ export function EditorCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
             onFinishConnect={() => finishConnect(n.id)}
             onDelete={() => dispatch({ type: "remove_node", id: n.id })}
           />
+        ))}
+
+        {/* Sticky Notes */}
+        {stickyNotes.map((n) => (
+          <StickyNote key={n.id} note={n} onUpdate={(c) => dispatch({ type: "update_sticky_note", id: n.id, content: c })}
+            onDelete={() => dispatch({ type: "remove_sticky_note", id: n.id })} />
         ))}
       </div>
 
@@ -313,65 +313,17 @@ function NodeView({
   onFinishConnect: () => void;
   onDelete: () => void;
 }) {
-  const def = getNodeDef(node.type);
-  if (!def) return null;
-  const Icon = def.icon;
+  const { runChain } = useWorkflow();
   const isConnecting = pendingFrom && pendingFrom !== node.id;
+  const isInRun = !runChain || runChain.executedNodes.includes(node.id);
 
   return (
     <div
+      style={{ left: node.x, top: node.y, width: NODE_W, opacity: isInRun ? 1 : 0.2 }}
       onPointerDown={onPointerDown}
-      style={{
-        left: node.x,
-        top: node.y,
-        width: NODE_W,
-        boxShadow: selected
-          ? "var(--shadow-selected)"
-          : node.status === "running"
-            ? "var(--shadow-running)"
-            : "var(--shadow-card)",
-      }}
-      className={`group absolute select-none rounded-lg border bg-card transition ${
-        selected ? "border-primary" : node.status === "error" ? "border-danger/60" : node.status === "success" ? "border-success/50" : "border-border"
-      }`}
+      className="absolute select-none"
     >
-      {/* category color stripe */}
-      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-lg" style={{ background: def.color }} />
-
-      <div className="flex items-center justify-between px-3 pt-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded" style={{ background: `${def.color}26`, color: def.color }}>
-            <Icon className="h-3.5 w-3.5" />
-          </span>
-          <span className="truncate text-[13px] font-semibold">{def.label}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {node.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
-          {node.status === "success" && <Check className="h-3.5 w-3.5 text-success" />}
-          {node.status === "error" && <X className="h-3.5 w-3.5 text-danger" />}
-          <button
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="hidden h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-danger/10 hover:text-danger group-hover:flex"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-
-      <div className="px-3 pb-2.5 pt-1.5">
-        <span
-          className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-          style={{ background: `${def.color}1f`, color: def.color }}
-        >
-          {def.badge}
-        </span>
-        <span className="ml-2 font-mono text-[10px] text-muted-foreground">{node.type}</span>
-      </div>
-
-      {/* sockets */}
+      <NodeCard node={node} selected={selected} onDelete={onDelete} />
       <button
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -394,7 +346,7 @@ function NodeView({
   );
 }
 
-function Wire({ x1, y1, x2, y2, animated, dashed }: { x1: number; y1: number; x2: number; y2: number; animated?: boolean; dashed?: boolean }) {
+function Wire({ x1, y1, x2, y2, animated, dashed, opacity }: { x1: number; y1: number; x2: number; y2: number; animated?: boolean; dashed?: boolean; opacity?: number }) {
   const dx = Math.max(40, Math.abs(x2 - x1) * 0.5);
   const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
   return (
@@ -404,6 +356,7 @@ function Wire({ x1, y1, x2, y2, animated, dashed }: { x1: number; y1: number; x2
       stroke={dashed ? "var(--muted-foreground)" : animated ? "var(--success)" : "var(--primary)"}
       strokeWidth={2}
       strokeDasharray={dashed ? "6 4" : animated ? "8 4" : undefined}
+      opacity={opacity ?? 1}
       style={animated ? { animation: "wire-flow 0.6s linear infinite" } : undefined}
     />
   );

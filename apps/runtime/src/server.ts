@@ -21,6 +21,7 @@ import { router as integrationsRouter } from './routes/integrations.js';
 import { router as agentsRouter } from './routes/agents.js';
 import { router as datasetsRouter } from './routes/datasets.js';
 import { router as credentialsRouter } from './routes/credentials.js';
+import { router as analyticsRouter } from './routes/analytics.js';
 import { initializePlatform } from './init.js';
 
 // MCP stdio mode — run as MCP server instead of HTTP
@@ -184,6 +185,7 @@ app.use('/api/v1/integrations', integrationsRouter);
 app.use('/api/v1/agents', agentsRouter);
 app.use('/api/v1/datasets', datasetsRouter);
 app.use('/api/v1/credentials', credentialsRouter);
+app.use('/api/v1/analytics', analyticsRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 M2A Unified Runtime listening on port ${PORT}`);

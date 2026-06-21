@@ -164,6 +164,33 @@ router.post('/:id/undeploy', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/:id/publish', async (req, res) => {
+  try {
+    const workflow = await db.getWorkflow(req.params.id);
+    if (!workflow) return res.status(404).json({ error: 'Workflow not found' });
+
+    const result = await db.query(
+      `SELECT COUNT(*) as count FROM execution_history WHERE workflow_id = $1`,
+      [req.params.id]
+    );
+    const version = (result.rows[0]?.count || 0) + 1;
+    const versionId = `v${version}_${Date.now()}`;
+
+    await db.query(
+      `UPDATE workflows SET definition = jsonb_set(definition, '{publishedVersion}', $2::jsonb) WHERE id = $1`,
+      [req.params.id, JSON.stringify({ version, versionId, publishedAt: new Date().toISOString(), definition: workflow })]
+    );
+
+    res.json({
+      published: true,
+      workflowId: req.params.id,
+      version,
+      versionId,
+      message: 'Workflow published. Walrus storage pending relayer availability.',
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await db.deleteWorkflow(req.params.id);

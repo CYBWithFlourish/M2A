@@ -287,6 +287,36 @@ router.post('/trigger/:token', async (req, res) => {
  * POST /api/v1/execute/sign
  * Signs and executes a transaction with an agent's zkLogin wallet.
  */
+router.get('/history/:id/chain', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM execution_history WHERE id = $1', [req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Execution not found' });
+
+    const execution = result.rows[0];
+    const nodeResults = execution.node_results || [];
+    const workflow = await db.getWorkflow(execution.workflow_id);
+
+    res.json({
+      runId: execution.id,
+      workflowName: execution.workflow_name,
+      status: execution.status,
+      startedAt: execution.started_at,
+      duration: execution.run_duration_ms,
+      nodes: (workflow?.nodes || []).map((n: any) => {
+        const nodeResult = (nodeResults as any[]).find((r: any) => r.nodeId === n.id);
+        return {
+          nodeId: n.id,
+          type: n.type,
+          label: n.data?.label || n.type,
+          executed: !!nodeResult,
+          status: nodeResult?.status || 'pending',
+        };
+      }),
+      edges: workflow?.edges || [],
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/sign', async (req, res) => {
   try {
     const { txBytes, agentWallet, secretKey, proofPoints, issBase64Details, headerBase64, salt, maxEpoch } = req.body;

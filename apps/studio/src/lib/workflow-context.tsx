@@ -31,6 +31,13 @@ export type Agent = {
   address: string;
 };
 
+export type StickyNoteData = {
+  id: string;
+  x: number;
+  y: number;
+  content: string;
+};
+
 type State = {
   workflowName: string;
   workflowId: string | null;
@@ -42,8 +49,10 @@ type State = {
   running: boolean;
   agents: Agent[];
   selectedAgentId: string | null;
+  stickyNotes: StickyNoteData[];
   undoStack: { nodes: CanvasNode[]; connections: Connection[] }[];
   redoStack: { nodes: CanvasNode[]; connections: Connection[] }[];
+  runChain: { runId: string; executedNodes: string[]; traversedEdges: string[] } | null;
 };
 
 type Action =
@@ -65,8 +74,13 @@ type Action =
   | { type: "set_node_output"; id: string; output: string }
   | { type: "set_deployed"; deployed: boolean }
   | { type: "update_node_config"; id: string; config: Record<string, unknown> }
+  | { type: "add_sticky_note"; note: StickyNoteData }
+  | { type: "update_sticky_note"; id: string; content: string }
+  | { type: "remove_sticky_note"; id: string }
   | { type: "undo" }
-  | { type: "redo" };
+  | { type: "redo" }
+  | { type: "show_run_chain"; runId: string; executedNodes: string[]; traversedEdges: string[] }
+  | { type: "clear_run_chain" };
 
 const initialState: State = {
   workflowName: "New Workflow",
@@ -79,8 +93,10 @@ const initialState: State = {
   running: false,
   agents: [],
   selectedAgentId: null,
+  stickyNotes: [],
   undoStack: [],
   redoStack: [],
+  runChain: null,
 };
 
 function isAgent(value: any): value is Agent {
@@ -153,6 +169,12 @@ function reducer(state: State, action: Action): State {
       const snapshot = { nodes: state.nodes, connections: state.connections };
       return { ...state, nodes: state.nodes.map((n) => (n.id === action.id ? { ...n, config: { ...n.config, ...action.config } } : n)), undoStack: [...state.undoStack.slice(-49), snapshot], redoStack: [] };
     }
+    case "add_sticky_note":
+      return { ...state, stickyNotes: [...state.stickyNotes, action.note] };
+    case "update_sticky_note":
+      return { ...state, stickyNotes: state.stickyNotes.map((n) => (n.id === action.id ? { ...n, content: action.content } : n)) };
+    case "remove_sticky_note":
+      return { ...state, stickyNotes: state.stickyNotes.filter((n) => n.id !== action.id) };
     case "undo": {
       if (state.undoStack.length === 0) return state;
       const prev = state.undoStack[state.undoStack.length - 1];
@@ -175,6 +197,10 @@ function reducer(state: State, action: Action): State {
         undoStack: [...state.undoStack, { nodes: state.nodes, connections: state.connections }],
       };
     }
+    case "show_run_chain":
+      return { ...state, runChain: { runId: action.runId, executedNodes: action.executedNodes, traversedEdges: action.traversedEdges } };
+    case "clear_run_chain":
+      return { ...state, runChain: null };
     default:
       return state;
   }

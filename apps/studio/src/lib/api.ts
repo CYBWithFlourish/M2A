@@ -167,6 +167,11 @@ export const api = {
     return res.json();
   },
 
+  async fetchRunChain(runId: string): Promise<any> {
+    const res = await fetch(`${BASE}/execute/history/${runId}/chain`);
+    return res.json();
+  },
+
   async getDatasetStats(): Promise<any> {
     const res = await fetch(`${BASE}/datasets/stats`);
     return res.json();
