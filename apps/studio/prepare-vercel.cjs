@@ -1,13 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. Copy Nitro server to api/ for Vercel serverless
-const apiDir = path.join(__dirname, 'api');
-const serverFile = path.join(__dirname, 'dist', 'server', 'server.js');
-if (fs.existsSync(serverFile)) {
+// 1. Copy entire dist/server/ to api/ so relative imports work
+const distServer = path.join(__dirname, 'dist', 'server');
+if (fs.existsSync(distServer)) {
   if (!fs.existsSync(apiDir)) fs.mkdirSync(apiDir, { recursive: true });
-  fs.copyFileSync(serverFile, path.join(apiDir, 'server.js'));
-  console.log('Copied dist/server/server.js → api/server.js');
+  fs.cpSync(distServer, apiDir, { recursive: true });
+  console.log('Copied dist/server/* → api/');
 }
 
 // 2. Generate index.html with correct asset hashes
