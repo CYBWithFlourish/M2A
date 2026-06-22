@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
     preview: {
       port: 5173,
       host: '0.0.0.0',
+      allowedHosts: ['m2astudio.xyz', 'www.m2astudio.xyz', '152.67.149.134'],
     },
   };
 });
