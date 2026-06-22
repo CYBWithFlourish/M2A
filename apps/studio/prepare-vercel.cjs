@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. Copy entire dist/server/ to api/ so relative imports work
+const apiDir = path.join(__dirname, 'api');
 const distServer = path.join(__dirname, 'dist', 'server');
+
+// 1. Copy entire dist/server/ to api/ so relative imports work
 if (fs.existsSync(distServer)) {
   if (!fs.existsSync(apiDir)) fs.mkdirSync(apiDir, { recursive: true });
   fs.cpSync(distServer, apiDir, { recursive: true });
